@@ -21,7 +21,7 @@ const toBase64 = (bits) => {
 const fromBase64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 // onboarded: 'yes' | 'no' (skipped) | 'unknown' (not asked yet)
-export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), onboarded: 'unknown', hinted: 'unknown' });
+export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), onboarded: 'unknown' });
 
 export const load = () => {
   try {

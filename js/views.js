@@ -19,7 +19,7 @@ const posterOf = (c) => (c.type === 'image' ? c.media.url : c.type === 'passage'
 
 export const featureLabel = (feature, rooms) => {
   const [kind, name] = [feature.slice(0, 1), feature.slice(2)];
-  return kind === 'r' ? rooms[name] : tagName(name);
+  return kind === 'r' ? rooms[name] ?? tagName(name) : tagName(name);
 };
 
 export const reasonText = (reason, rooms, categories = []) => {
@@ -135,7 +135,7 @@ export const noteSheetHtml = (card) => {
 export const whySheetHtml = (card, reason, rooms, categories) => `
   <h2 id="sheet-title">Why this?</h2>
   <p class="note">${esc(reasonText(reason, rooms, categories))}</p>
-  <p class="line dim">Room</p><p class="chips"><span>${esc(rooms[card.editorial.room])}</span></p>
+  <p class="line dim">Room</p><p class="chips"><span>${esc(rooms[card.editorial.room] ?? card.editorial.room)}</span></p>
   <p class="line dim">Tags</p><p class="chips">${card.editorial.tags.map((t) => `<span>${esc(tagName(t))}</span>`).join('')}</p>
   <p class="line dim">Ranking runs on this device. Nothing about what you look at is sent anywhere.</p>
   <p><button type="button" class="btn ghost" data-act="open-interests">Your interests</button></p>`;

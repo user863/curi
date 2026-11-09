@@ -8,14 +8,11 @@ ROOM_WORDS = (
                   "ship", "boat", "coast", "beach", "winter", "summer", "valley", "lake", "horse", "bird", "animal", "flowers")),
     ("interiors", ("interior", "still life", "room", "kitchen", "table", "fruit", "vase", "window", "domestic")),
 )
-LINE_DEPARTMENTS = ("drawing", "print", "photograph", "works on paper", "etching", "engraving", "woodcut", "lithograph", "watercolo", "map")
 DEEP_TIME_DEPARTMENTS = ("egypt", "ancient", "greek", "roman", "near east", "antiquit", "archaeolog")
 
 def room_of(text, department=""):
     """text: title plus tags, lower-cased by this function."""
     t, d = text.lower(), (department or "").lower()
-    if any(w in d for w in LINE_DEPARTMENTS):
-        return "line"
     if any(w in d for w in DEEP_TIME_DEPARTMENTS):
         return "deep-time"
     for room, words in ROOM_WORDS:

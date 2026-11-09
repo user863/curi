@@ -10,6 +10,7 @@ const AHEAD = 2; // cards rendered ahead of the active one
 const TAP_MS = 260;
 const DWELL_MIN_S = 3;
 const UI_HIDE_MS = 4000;
+const INTRO_MS = 2600; // controls show at launch, then slide away
 const FIRST_WANT = 120; // works per category to have before the first card
 const WANT = 300; // works per category to keep loaded (at an equal share)
 const EXPLORE_CLUSTERS = 2; // random clusters per fetch: serendipity, and decoys for privacy
@@ -67,10 +68,11 @@ const rank = () => pickNext({
 /* ---------- chrome (hidden by default) ---------- */
 
 let uiTimer;
-const setUi = (on) => {
+let intro = true; // the first card opens with the controls showing
+const setUi = (on, ms = UI_HIDE_MS) => {
   clearTimeout(uiTimer);
   app.classList.toggle('ui', on);
-  if (on) uiTimer = setTimeout(() => setUi(false), UI_HIDE_MS);
+  if (on) uiTimer = setTimeout(() => setUi(false), ms);
 };
 const toggleUi = () => setUi(!app.classList.contains('ui'));
 
@@ -326,7 +328,8 @@ const activate = (el) => {
   active = el;
   activeSince = performance.now();
   app.dataset.tone = el.dataset.tone;
-  setUi(false);
+  setUi(intro, INTRO_MS);
+  intro = false;
   const entry = cardOf(el);
   if (entry && !hasBit(state.seen, entry.n)) update({ seen: withBit(state.seen, entry.n) });
   syncDock();
@@ -638,10 +641,6 @@ const begin = async () => {
   onboarding.innerHTML = '';
   await fillAhead();
   grow(); // then fill out the rest in the background
-  if (state.hinted !== 'yes') {
-    update({ hinted: 'yes' });
-    setTimeout(() => toast('Tap for controls or to pause · double-tap to save', 4200), 900);
-  }
 };
 
 /* ---------- init ---------- */
