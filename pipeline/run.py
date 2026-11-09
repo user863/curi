@@ -3,7 +3,7 @@ Usage (from the project root): python3 -m pipeline.run [--only met,gutenberg,pre
 import argparse, collections, json
 from pathlib import Path
 from . import db, embed, export, quality, secrets, state
-from .sources import archive, cleveland, europeana, gutenberg, met, openverse
+from .sources import archive, cleveland, europeana, europeana_galleries, gutenberg, met, openverse
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -44,6 +44,7 @@ def main():
             ("gutenberg", lambda s: gutenberg.run(cfg["gutenberg"], s), cfg["gutenberg"])]
     jobs += [(a["name"], (lambda a: lambda s: archive.run(a, s))(a), a) for a in cfg["archive"]]
     jobs += [(e["name"], (lambda e: lambda s: europeana.run(e, s))(e), e) for e in cfg["europeana"]]
+    jobs += [("europeana-galleries", lambda s: europeana_galleries.run(cfg["europeana_galleries"], s), cfg["europeana_galleries"])]
     jobs += [("openverse", lambda s: openverse.run(cfg["openverse"], s), cfg["openverse"])]
 
     conn = db.connect(Path(__file__).parent / "works.sqlite")
@@ -72,6 +73,8 @@ def main():
         cards = [finish(x, overrides) for x in select(fresh, c["take"], c["max_per_group"])]
         for card in cards:
             db.upsert(conn, card, embed.embed(card), embed.MODEL, embed.DIM, rev)
+        db.add_tags(conn, state.RETAG)
+        state.RETAG.clear()
         conn.commit()  # checkpoint per source: a long run can be stopped and resumed
         state.KNOWN.update(card["id"] for card in cards)
         state.KEYS.update(state.dupe_key(card["title"], card["creator"]) for card in cards)

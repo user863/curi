@@ -157,14 +157,14 @@ const explore = (index, catCode, taken, rng, exclude) => {
 };
 
 // Next work: choose the category furthest below its share in the recent window, then the best work in it.
-export const pickNext = ({ index, profile, scores, taken, shown, rng }) => {
+export const pickNext = ({ index, profile, scores, taken, shown, rng, only = null }) => {
   const ids = index.categories.map((c) => c.id);
   const share = shares(profile, ids);
   const recent = shown.slice(-WINDOW).map((id) => index.cat[index.posOf(id)]);
   const deficit = ids.map((id, k) => [k, share[id] - (recent.length ? recent.filter((c) => c === k).length / recent.length : 0) + rng() * JITTER]);
   deficit.sort((a, b) => b[1] - a[1]);
   const last = shown.slice(-RECENT).map((id) => index.posOf(id));
-  for (const [k] of deficit) {
+  for (const [k] of only ? deficit.filter(([k]) => ids[k] === only) : deficit) {
     const list = topInCategory(index, scores, k, taken, TOP_M);
     if (!list.length) continue;
     if (shown.length >= 2 && rng() < EXPLORE_RATE) {

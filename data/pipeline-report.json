@@ -1,20 +1,37 @@
 {
+ "europeana-galleries": {
+  "candidates": 4740,
+  "added": 3000,
+  "rejected": {
+   "license": 10142,
+   "no-media": 9,
+   "known": 3,
+   "rights-gate-unknown": 1,
+   "no-title": 10,
+   "image-too-large": 1840,
+   "image-fetch-failed": 1308,
+   "image-not-web-image": 859,
+   "unplayable-too-short-or-unreadable": 2,
+   "unplayable-fetch-failed": 2,
+   "duplicate": 15
+  }
+ },
  "totals": {
-  "published": 3341,
-  "addedThisRun": 0,
+  "published": 6341,
+  "addedThisRun": 3000,
   "types": {
-   "audio": 123,
+   "audio": 124,
    "passage": 40,
    "video": 76,
-   "image": 3102
+   "image": 6101
   },
   "rooms": {
    "words": 72,
-   "sound": 91,
+   "sound": 92,
    "film": 76,
-   "open-air": 217,
-   "faces": 515,
-   "interiors": 1922,
+   "open-air": 344,
+   "faces": 830,
+   "interiors": 4479,
    "deep-time": 448
   }
  }

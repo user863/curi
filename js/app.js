@@ -63,6 +63,7 @@ const rank = () => pickNext({
   taken: (id) => hasBit(state.seen, id) || catalog.isBlocked(id) || shownIds.has(id),
   shown: shown.map((s) => s.n),
   rng: Math.random,
+  only: shown.length === 0 ? 'visual' : null, // temp: always open on an artwork, never a loading film or recording
 });
 
 /* ---------- chrome (hidden by default) ---------- */

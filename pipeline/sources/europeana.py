@@ -101,6 +101,17 @@ def safe_admit(card, src, stats):
     except Exception:
         return False, "fetch-failed"
 
+def probe_all(cards, src, stats):
+    """Keeps the cards whose media loads on a phone; probes in parallel."""
+    out = []
+    with ThreadPoolExecutor(max_workers=src.get("workers", 16)) as ex:
+        for card, (ok, verdict) in zip(cards, ex.map(lambda c: safe_admit(c, src, stats), cards)):
+            if ok:
+                out.append(card)
+            else:
+                reject(stats, src["name"], f"unplayable-{verdict}" if card["type"] == "audio" else f"image-{verdict}")
+    return out
+
 def run(src, stats):
     name, key = src["name"], secrets.get("EUROPEANA_API_KEY")
     if not key:
@@ -127,11 +138,4 @@ def run(src, stats):
     for card in sorted(pool, key=lambda c: c["_score"], reverse=True):
         by_provider[card["_group"]].append(card)
     shortlist = [c for cards in by_provider.values() for c in cards[: src["max_per_group"] * 2]]
-    out = []
-    with ThreadPoolExecutor(max_workers=src.get("workers", 16)) as ex:
-        for card, (ok, verdict) in zip(shortlist, ex.map(lambda c: safe_admit(c, src, stats), shortlist)):
-            if ok:
-                out.append(card)
-            else:
-                reject(stats, name, f"unplayable-{verdict}" if card["type"] == "audio" else f"image-{verdict}")
-    return out
+    return probe_all(shortlist, src, stats)

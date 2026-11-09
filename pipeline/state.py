@@ -6,6 +6,7 @@ import re
 KNOWN = set()  # uids
 KEYS = set()   # normalised (title, creator), to catch the same work arriving from two sources
 TAGS = []      # most common subject tags in the catalogue, used as search terms
+RETAG = {}     # uid -> tags to add to works the database already holds (set by adapters)
 
 def dupe_key(title, creator):
     return (re.sub(r"\W+", "", (title or "").lower())[:60], re.sub(r"\W+", "", (creator or "").lower())[:30])

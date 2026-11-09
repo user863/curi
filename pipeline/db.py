@@ -81,6 +81,17 @@ def upsert(conn, card, vec, model, dim, rev):
     conn.execute("INSERT OR REPLACE INTO work_embedding VALUES(?,?,?,?)", (wid, model, dim, vec))
     return wid
 
+def add_tags(conn, tags_by_uid):
+    """Adds tags to existing works; leaves their other tags alone."""
+    for uid, slugs in tags_by_uid.items():
+        row = conn.execute("SELECT id FROM work WHERE uid=?", (uid,)).fetchone()
+        if not row:
+            continue
+        for slug in slugs:
+            conn.execute("INSERT OR IGNORE INTO tag(slug) VALUES(?)", (slug,))
+            tid = conn.execute("SELECT id FROM tag WHERE slug=?", (slug,)).fetchone()["id"]
+            conn.execute("INSERT OR IGNORE INTO work_tag VALUES(?,?)", (row["id"], tid))
+
 def retire_missing(conn, live_uids, rev):
     """Works that dropped out of a full run stay in the database (ids are never reused) but leave the packs."""
     marks = ",".join("?" * len(live_uids))
