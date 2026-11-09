@@ -1,0 +1,385 @@
+{
+  "met": {
+    "pool_per_department": 60,
+    "exclude_departments": [
+      16,
+      8
+    ],
+    "take": 400,
+    "max_per_group": 8,
+    "delay": 0.35
+  },
+  "gutenberg": {
+    "pool": 120,
+    "passages_per_book": 6,
+    "take": 400,
+    "max_per_group": 12
+  },
+  "archive": [
+    {
+      "name": "prelinger-film",
+      "kind": "video",
+      "mediatype": "movies",
+      "collection": "prelinger",
+      "min_downloads": 30000,
+      "pool": 60,
+      "min_seconds": 120,
+      "room": "film",
+      "tags": [
+        "film"
+      ],
+      "tones": [
+        "ink"
+      ],
+      "excerpt": {
+        "start_frac": 0.3,
+        "length_s": 45
+      },
+      "group": "decade",
+      "take": 24,
+      "max_per_group": 5
+    },
+    {
+      "name": "nasa-film",
+      "kind": "video",
+      "mediatype": "movies",
+      "collection": "nasa",
+      "min_downloads": 20000,
+      "pool": 40,
+      "min_seconds": 90,
+      "room": "film",
+      "tags": [
+        "film",
+        "space"
+      ],
+      "tones": [
+        "ink"
+      ],
+      "excerpt": {
+        "start_frac": 0.3,
+        "length_s": 45
+      },
+      "group": "decade",
+      "take": 12,
+      "max_per_group": 4
+    },
+    {
+      "name": "librivox",
+      "kind": "audio",
+      "mediatype": "audio",
+      "collection": "librivoxaudio",
+      "min_downloads": 300000,
+      "pool": 40,
+      "min_seconds": 120,
+      "room": "words",
+      "tags": [
+        "spoken-word",
+        "audio"
+      ],
+      "tones": [
+        "paper",
+        "mauve",
+        "sun",
+        "sky"
+      ],
+      "excerpt": {
+        "start_s": 30,
+        "length_s": 90
+      },
+      "group": "creator",
+      "take": 16,
+      "max_per_group": 1,
+      "decade_tag": false,
+      "show_date": false
+    },
+    {
+      "name": "nasa-audio",
+      "kind": "audio",
+      "mediatype": "audio",
+      "collection": "nasaaudiocollection",
+      "min_downloads": 5000,
+      "pool": 40,
+      "min_seconds": 60,
+      "room": "sound",
+      "tags": [
+        "audio",
+        "space",
+        "recording"
+      ],
+      "prefer_files": [
+        "highlight",
+        "clip",
+        "launch"
+      ],
+      "tones": [
+        "ink",
+        "sky",
+        "mauve"
+      ],
+      "excerpt": {
+        "start_s": 20,
+        "length_s": 90,
+        "whole_if_under": 300
+      },
+      "group": "decade",
+      "take": 12,
+      "max_per_group": 4
+    },
+    {
+      "name": "newsreels",
+      "kind": "video",
+      "mediatype": "movies",
+      "collection": "universal_newsreels",
+      "min_downloads": 3000,
+      "pool": 60,
+      "min_seconds": 60,
+      "room": "film",
+      "tags": [
+        "film",
+        "newsreel"
+      ],
+      "tones": [
+        "ink"
+      ],
+      "excerpt": {
+        "start_frac": 0.2,
+        "length_s": 40
+      },
+      "group": "decade",
+      "take": 20,
+      "max_per_group": 4
+    },
+    {
+      "name": "nara-film",
+      "kind": "video",
+      "mediatype": "movies",
+      "collection": "FedFlix",
+      "query_extra": "AND identifier:gov.archives*",
+      "min_downloads": 8000,
+      "pool": 60,
+      "min_seconds": 120,
+      "room": "film",
+      "tags": [
+        "film",
+        "archive"
+      ],
+      "tones": [
+        "ink"
+      ],
+      "excerpt": {
+        "start_frac": 0.3,
+        "length_s": 45
+      },
+      "group": "decade",
+      "take": 16,
+      "max_per_group": 4
+    },
+    {
+      "name": "old-time-radio",
+      "kind": "audio",
+      "mediatype": "audio",
+      "collection": "oldtimeradio",
+      "min_downloads": 100000,
+      "pool": 50,
+      "min_seconds": 120,
+      "room": "sound",
+      "tags": [
+        "radio",
+        "audio",
+        "broadcast"
+      ],
+      "decade_tag": false,
+      "show_date": false,
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "excerpt": {
+        "start_s": 60,
+        "length_s": 90,
+        "whole_if_under": 300
+      },
+      "group": "none",
+      "take": 16,
+      "max_per_group": 1
+    }
+  ],
+  "cleveland": {
+    "on_view_pool": 7000,
+    "take": 1500,
+    "max_per_group": 150
+  },
+  "europeana": [
+    {
+      "name": "europeana-art",
+      "type": "IMAGE",
+      "kind": "image",
+      "theme": "art",
+      "min_tier": 4,
+      "providers": 40,
+      "per_provider": 100,
+      "take": 900,
+      "max_per_group": 30,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana"
+      ]
+    },
+    {
+      "name": "europeana-photo",
+      "type": "IMAGE",
+      "kind": "image",
+      "theme": "photography",
+      "min_tier": 4,
+      "providers": 40,
+      "per_provider": 60,
+      "take": 450,
+      "max_per_group": 14,
+      "tones": [
+        "paper",
+        "mauve",
+        "ink"
+      ],
+      "tags": [
+        "photograph"
+      ]
+    },
+    {
+      "name": "europeana-fashion",
+      "type": "IMAGE",
+      "kind": "image",
+      "theme": "fashion",
+      "min_tier": 4,
+      "providers": 15,
+      "per_provider": 40,
+      "take": 150,
+      "max_per_group": 12,
+      "tones": [
+        "paper",
+        "mauve",
+        "sun"
+      ],
+      "tags": [
+        "fashion"
+      ]
+    },
+    {
+      "name": "europeana-archaeology",
+      "type": "IMAGE",
+      "kind": "image",
+      "theme": "archaeology",
+      "min_tier": 4,
+      "providers": 25,
+      "per_provider": 40,
+      "take": 250,
+      "max_per_group": 12,
+      "room": "deep-time",
+      "tones": [
+        "ink",
+        "paper",
+        "mauve"
+      ],
+      "tags": [
+        "archaeology"
+      ]
+    },
+    {
+      "name": "europeana-music",
+      "type": "SOUND",
+      "kind": "audio",
+      "theme": "music",
+      "min_tier": 4,
+      "providers": 30,
+      "per_provider": 40,
+      "take": 250,
+      "max_per_group": 12,
+      "min_seconds": 60,
+      "room": "sound",
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "tags": [
+        "music",
+        "recording"
+      ],
+      "excerpt": {
+        "start_s": 20,
+        "length_s": 90,
+        "whole_if_under": 240
+      }
+    },
+    {
+      "name": "europeana-sound",
+      "type": "SOUND",
+      "kind": "audio",
+      "min_tier": 4,
+      "providers": 30,
+      "per_provider": 30,
+      "take": 150,
+      "max_per_group": 8,
+      "min_seconds": 60,
+      "room": "sound",
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "tags": [
+        "recording",
+        "archive"
+      ],
+      "excerpt": {
+        "start_s": 20,
+        "length_s": 90,
+        "whole_if_under": 240
+      }
+    }
+  ],
+  "openverse": {
+    "name": "openverse",
+    "sources": [
+      "smk",
+      "brooklynmuseum",
+      "wellcome_collection",
+      "sciencemuseum",
+      "museumsvictoria",
+      "finnish_heritage_agency",
+      "digitaltmuseum",
+      "smithsonian_cooper_hewitt_museum",
+      "nasa"
+    ],
+    "licenses": [
+      "cc0",
+      "pdm",
+      "by",
+      "by-sa"
+    ],
+    "min_side": 1000,
+    "max_requests": 120,
+    "max_terms": 20,
+    "source_prior": {
+      "smk": 0.8,
+      "brooklynmuseum": 0.7,
+      "wellcome_collection": 0.7,
+      "sciencemuseum": 0.6,
+      "museumsvictoria": 0.6,
+      "finnish_heritage_agency": 0.6,
+      "digitaltmuseum": 0.5,
+      "smithsonian_cooper_hewitt_museum": 0.7,
+      "nasa": 0.6
+    },
+    "take": 300,
+    "max_per_group": 40
+  }
+}

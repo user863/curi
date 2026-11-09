@@ -1,0 +1,647 @@
+{
+  "rooms": {
+    "open-air": "Open air",
+    "faces": "Faces",
+    "interiors": "Interiors",
+    "line": "Line",
+    "deep-time": "Deep time",
+    "words": "Words"
+  },
+  "cards": {
+    "met-436535": {
+      "room": "open-air",
+      "tags": [
+        "landscape",
+        "sky",
+        "field",
+        "night-sky",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.25,
+      "tone": "ink",
+      "note": "Painted at Saint-Rémy in 1889. The wheat and the sky move to the same brush rhythm, and the cypress goes up like a flame."
+    },
+    "met-435809": {
+      "room": "open-air",
+      "tags": [
+        "landscape",
+        "field",
+        "labor",
+        "16th-century",
+        "netherlands"
+      ],
+      "quality": 1.2,
+      "tone": "mauve",
+      "note": "One of a series of paintings of the seasons, made in 1565. The reapers cut wheat while a few rest in the shade; the whole valley is in the picture."
+    },
+    "met-437881": {
+      "room": "interiors",
+      "tags": [
+        "interior",
+        "light",
+        "woman",
+        "quiet",
+        "17th-century",
+        "netherlands"
+      ],
+      "quality": 1.25,
+      "tone": "ink",
+      "note": "A woman holds a window casement open with one hand and a pitcher with the other. Nothing happens; the light carries it."
+    },
+    "met-437879": {
+      "room": "faces",
+      "tags": [
+        "portrait",
+        "woman",
+        "light",
+        "quiet",
+        "17th-century",
+        "netherlands"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "note": "A tronie: a character study, not a commissioned portrait. The sitter is unidentified."
+    },
+    "met-436947": {
+      "room": "open-air",
+      "tags": [
+        "water",
+        "light",
+        "leisure",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "note": "The boat is cut off by the frame and the river fills the background with no horizon, a composition often compared to Japanese prints."
+    },
+    "met-12116": {
+      "room": "open-air",
+      "tags": [
+        "garden",
+        "light",
+        "watercolor",
+        "20th-century",
+        "usa"
+      ],
+      "quality": 1.0,
+      "tone": "paper",
+      "note": "The Generalife is the garden beside the Alhambra in Granada. Sargent used wax crayon with the wash: the wax resists the paint and leaves the white lights."
+    },
+    "met-12127": {
+      "room": "faces",
+      "tags": [
+        "portrait",
+        "woman",
+        "19th-century",
+        "usa",
+        "france"
+      ],
+      "quality": 1.2,
+      "tone": "ink",
+      "note": "Shown at the 1884 Paris Salon, where it caused a scandal. Sargent had painted the right shoulder strap fallen and later painted it back in place."
+    },
+    "met-437397": {
+      "room": "faces",
+      "tags": [
+        "portrait",
+        "self-portrait",
+        "man",
+        "quiet",
+        "17th-century",
+        "netherlands"
+      ],
+      "quality": 1.25,
+      "tone": "ink",
+      "note": "Painted at 54, four years after bankruptcy forced the sale of his house and collection."
+    },
+    "met-435882": {
+      "room": "interiors",
+      "tags": [
+        "still-life",
+        "flowers",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.0,
+      "tone": "mauve",
+      "note": "The apples carry the composition. The table edge and the pot tilt because Cézanne painted from more than one viewpoint at once."
+    },
+    "met-435868": {
+      "room": "interiors",
+      "tags": [
+        "figure",
+        "quiet",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.1,
+      "tone": "paper",
+      "note": "One of five paintings of the subject from the early 1890s. Two men face each other across a table in a silence the picture treats as its subject."
+    },
+    "met-435876": {
+      "room": "faces",
+      "tags": [
+        "portrait",
+        "woman",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.0,
+      "tone": "mauve",
+      "note": "Hortense Fiquet, Cézanne's wife, sat for him many times. The armchair and the dress get the same attention as the face."
+    },
+    "met-436121": {
+      "room": "faces",
+      "tags": [
+        "portrait",
+        "woman",
+        "flowers",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "note": "The woman sits at the edge of the canvas while the flowers take the centre. A portrait that looks away from its sitter."
+    },
+    "met-436173": {
+      "room": "faces",
+      "tags": [
+        "woman",
+        "pastel",
+        "drawing",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.0,
+      "tone": "mauve",
+      "note": "Late Degas: pastel built up in layers of hatching until the colour vibrates."
+    },
+    "met-438817": {
+      "room": "interiors",
+      "tags": [
+        "figure",
+        "dance",
+        "light",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "note": "A rehearsal room at the Paris Opéra. The ballet master Jules Perrot stands at the right, leaning on his cane, while the girls stretch and wait."
+    },
+    "met-10154": {
+      "room": "open-air",
+      "tags": [
+        "landscape",
+        "mountains",
+        "sky",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.0,
+      "tone": "ink",
+      "note": "Bierstadt travelled with Frederick Lander's survey expedition to the Rockies in 1859 and painted this in his New York studio four years later."
+    },
+    "met-11122": {
+      "room": "open-air",
+      "tags": [
+        "sea",
+        "water",
+        "storm",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "note": "A man lies on a dismasted boat among sharks, with a waterspout on the horizon. Homer reworked it by 1906."
+    },
+    "met-11145": {
+      "room": "open-air",
+      "tags": [
+        "field",
+        "labor",
+        "landscape",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.1,
+      "tone": "paper",
+      "note": "A farmer in shirtsleeves cuts wheat with a scythe, his army jacket on the ground. Painted in 1865, the year the Civil War ended."
+    },
+    "met-10481": {
+      "room": "open-air",
+      "tags": [
+        "landscape",
+        "mountains",
+        "sky",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.0,
+      "tone": "ink",
+      "note": "In 1859 Church showed this alone in a New York studio and charged admission. Visitors brought opera glasses to study the detail."
+    },
+    "met-437854": {
+      "room": "open-air",
+      "tags": [
+        "sea",
+        "water",
+        "sky",
+        "light",
+        "19th-century",
+        "britain"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "note": "Painted in the mid-1840s, near the end of Turner's life. The ships and whales are barely more solid than the light around them."
+    },
+    "met-437097": {
+      "room": "open-air",
+      "tags": [
+        "field",
+        "landscape",
+        "labor",
+        "sky",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.0,
+      "tone": "ink",
+      "note": "From a set of four paintings of the seasons that Millet made for a private patron."
+    },
+    "met-438816": {
+      "room": "open-air",
+      "tags": [
+        "landscape",
+        "winter",
+        "forest",
+        "sky",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.0,
+      "tone": "ink",
+      "note": "The Met dates it ca. 1846–67: Rousseau kept returning to the canvas for roughly two decades."
+    },
+    "met-39799": {
+      "room": "line",
+      "tags": [
+        "print",
+        "sea",
+        "water",
+        "japan",
+        "19th-century"
+      ],
+      "quality": 1.3,
+      "tone": "paper",
+      "note": "From the series Thirty-six Views of Mount Fuji. Fuji is the small peak in the distance; the subject is the wave."
+    },
+    "met-282040": {
+      "room": "open-air",
+      "tags": [
+        "photograph",
+        "sky",
+        "clouds",
+        "landscape",
+        "19th-century",
+        "britain"
+      ],
+      "quality": 1.25,
+      "tone": "sky",
+      "note": "Early photographic materials were so sensitive to blue light that skies usually printed as blank white. Clouds that register at all are an achievement."
+    },
+    "met-337499": {
+      "room": "line",
+      "tags": [
+        "watercolor",
+        "water",
+        "mountains",
+        "sky",
+        "light",
+        "19th-century",
+        "britain"
+      ],
+      "quality": 1.1,
+      "tone": "paper",
+      "note": "A Swiss lake in watercolour, made in 1843 on Turner's late tours. The colour does the work that line would do in his earlier drawings."
+    },
+    "met-337491": {
+      "room": "line",
+      "tags": [
+        "drawing",
+        "landscape",
+        "17th-century",
+        "netherlands"
+      ],
+      "quality": 1.0,
+      "tone": "mauve",
+      "note": "A drawing for its own sake. Rembrandt walked the country around Amsterdam and set down what he saw in a few strokes of pen and wash."
+    },
+    "met-459092": {
+      "room": "open-air",
+      "tags": [
+        "landscape",
+        "light",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.0,
+      "tone": "ink",
+      "note": "The Jas de Bouffan was the Cézanne family estate near Aix-en-Provence. He painted its trees and buildings for years."
+    },
+    "met-336327": {
+      "room": "line",
+      "tags": [
+        "drawing",
+        "interior",
+        "quiet",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.1,
+      "tone": "mauve",
+      "note": "Made in 1889, the same year as Wheat Field with Cypresses, inside the asylum at Saint-Rémy where Van Gogh had admitted himself."
+    },
+    "met-459238": {
+      "room": "line",
+      "tags": [
+        "drawing",
+        "landscape",
+        "forest",
+        "17th-century",
+        "netherlands"
+      ],
+      "quality": 1.0,
+      "tone": "paper",
+      "note": "Rembrandt varied his ink from pale to near-black, pushing the cottage forward and the wood back."
+    },
+    "met-544184": {
+      "room": "deep-time",
+      "tags": [
+        "portrait",
+        "sculpture",
+        "ancient",
+        "egypt",
+        "man"
+      ],
+      "quality": 1.3,
+      "tone": "ink",
+      "note": "A pharaoh of the Twelfth Dynasty. The heavy lids and lined face depart from the smooth ideal of earlier royal portraits."
+    },
+    "met-547031": {
+      "room": "deep-time",
+      "tags": [
+        "object",
+        "ancient",
+        "egypt",
+        "colour"
+      ],
+      "quality": 1.0,
+      "tone": "sky",
+      "note": "Egyptian blue is one of the earliest synthetic pigments, made by heating sand with copper and calcium minerals."
+    },
+    "met-313330": {
+      "room": "deep-time",
+      "tags": [
+        "object",
+        "ancient",
+        "bird",
+        "animal",
+        "jewelry"
+      ],
+      "quality": 1.0,
+      "tone": "mauve",
+      "note": "Jadeite is carved by abrasion: slowly, with sand and cord. A pendant like this took many hours of work."
+    },
+    "met-38435": {
+      "room": "deep-time",
+      "tags": [
+        "object",
+        "ancient",
+        "bird",
+        "jewelry",
+        "india"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "note": "A kinnari is half bird, half woman, a celestial musician in Indian literature. Gold set with garnet."
+    },
+    "met-327104": {
+      "room": "deep-time",
+      "tags": [
+        "figure",
+        "sculpture",
+        "ancient",
+        "bronze"
+      ],
+      "quality": 1.0,
+      "tone": "paper",
+      "note": "The Met cannot say whether this is a king or a god. The headdress and the pose fit either."
+    },
+    "met-459086": {
+      "room": "interiors",
+      "tags": [
+        "interior",
+        "light",
+        "quiet",
+        "17th-century",
+        "netherlands"
+      ],
+      "quality": 1.0,
+      "tone": "ink",
+      "note": "De Hooch composes with doorways and tiled floors: each opening leads to another lit space."
+    },
+    "met-359362": {
+      "room": "line",
+      "tags": [
+        "print",
+        "landscape",
+        "colour",
+        "19th-century",
+        "france"
+      ],
+      "quality": 1.0,
+      "tone": "sky",
+      "note": "A monotype: oil colour painted on a plate and pressed onto paper once. Degas made his landscapes from memory, in the studio."
+    },
+    "met-682931": {
+      "room": "line",
+      "tags": [
+        "print",
+        "sky",
+        "clouds",
+        "water",
+        "19th-century",
+        "britain"
+      ],
+      "quality": 1.0,
+      "tone": "mauve",
+      "note": "A mezzotint is made by roughening the whole plate, then scraping light back in. It suits clouds."
+    },
+    "pg-walden-deliberately": {
+      "room": "words",
+      "tags": [
+        "prose",
+        "nature",
+        "attention",
+        "solitude",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.3,
+      "tone": "paper",
+      "title": "Where I Lived, and What I Lived For",
+      "creator": "Henry David Thoreau",
+      "work": "Walden",
+      "year": "1854",
+      "note": "Thoreau lived at Walden Pond from 1845 to 1847. This is the passage the book is remembered for."
+    },
+    "pg-walden-stream": {
+      "room": "words",
+      "tags": [
+        "prose",
+        "nature",
+        "attention",
+        "water",
+        "sky",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.2,
+      "tone": "sky",
+      "title": "Where I Lived, and What I Lived For",
+      "creator": "Henry David Thoreau",
+      "work": "Walden",
+      "year": "1854",
+      "note": "From the same chapter. Time as a stream to fish in, and the sky as its deeper water."
+    },
+    "pg-whitman-spider": {
+      "room": "words",
+      "tags": [
+        "poem",
+        "attention",
+        "solitude",
+        "animal",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.2,
+      "tone": "ink",
+      "title": "A Noiseless Patient Spider",
+      "creator": "Walt Whitman",
+      "work": "Leaves of Grass",
+      "year": "1891–92 edition",
+      "note": "One image across two stanzas: the spider pays out thread into empty space, and so does the soul. The line itself repeats \"filament\" three times, like thread leaving the spinneret."
+    },
+    "pg-whitman-grass": {
+      "room": "words",
+      "tags": [
+        "poem",
+        "nature",
+        "field",
+        "attention",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.1,
+      "tone": "sun",
+      "title": "Song of Myself, 6",
+      "creator": "Walt Whitman",
+      "work": "Leaves of Grass",
+      "year": "1891–92 edition",
+      "note": "The first of several guesses at what grass is. He never settles on one."
+    },
+    "pg-emerson-eyeball": {
+      "room": "words",
+      "tags": [
+        "prose",
+        "nature",
+        "attention",
+        "solitude",
+        "sky",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.1,
+      "tone": "paper",
+      "title": "Nature, I",
+      "creator": "Ralph Waldo Emerson",
+      "work": "Nature",
+      "year": "1836",
+      "note": "The \"transparent eye-ball\" became Emerson's most quoted and most caricatured image."
+    },
+    "pg-emerson-child": {
+      "room": "words",
+      "tags": [
+        "prose",
+        "nature",
+        "attention",
+        "sky",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.1,
+      "tone": "mauve",
+      "title": "Nature, I",
+      "creator": "Ralph Waldo Emerson",
+      "work": "Nature",
+      "year": "1836",
+      "note": "Few adults see nature; a child does. Emerson's test for a lover of nature: inner and outer senses still adjusted to each other."
+    },
+    "pg-melville-ishmael": {
+      "room": "words",
+      "tags": [
+        "prose",
+        "sea",
+        "solitude",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.1,
+      "tone": "ink",
+      "title": "Loomings",
+      "creator": "Herman Melville",
+      "work": "Moby-Dick",
+      "year": "1851",
+      "note": "The opening paragraph. Ishmael's cure for gloom is the sea."
+    },
+    "pg-dickinson-hope": {
+      "room": "words",
+      "tags": [
+        "poem",
+        "bird",
+        "animal",
+        "quiet",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.2,
+      "tone": "sun",
+      "title": "\"Hope\" is the thing with feathers",
+      "creator": "Emily Dickinson",
+      "work": "Poems",
+      "year": "published after 1886",
+      "note": "Dickinson published almost nothing in her lifetime. Two stanzas, one bird."
+    },
+    "pg-dickinson-nobody": {
+      "room": "words",
+      "tags": [
+        "poem",
+        "solitude",
+        "quiet",
+        "animal",
+        "19th-century",
+        "usa"
+      ],
+      "quality": 1.1,
+      "tone": "mauve",
+      "title": "I'm nobody! Who are you?",
+      "creator": "Emily Dickinson",
+      "work": "Poems",
+      "year": "published after 1886",
+      "note": "First published after her death. The frog is the other half of the joke."
+    }
+  }
+}

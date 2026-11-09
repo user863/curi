@@ -1,0 +1,12 @@
+# local state and build output
+.DS_Store
+.claude/
+pipeline/.cache/
+pipeline/works.sqlite
+pipeline/__pycache__/
+pipeline/sources/__pycache__/
+pipeline/.env*
+ios/build/
+ios/build-sim/
+ios/Commonplace.xcodeproj/
+ios/**/xcuserdata/

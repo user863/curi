@@ -1,0 +1,22 @@
+{
+ "totals": {
+  "published": 3341,
+  "addedThisRun": 0,
+  "types": {
+   "audio": 123,
+   "passage": 40,
+   "video": 76,
+   "image": 3102
+  },
+  "rooms": {
+   "words": 72,
+   "sound": 91,
+   "film": 76,
+   "open-air": 196,
+   "faces": 437,
+   "interiors": 1506,
+   "deep-time": 448,
+   "line": 515
+  }
+ }
+}
