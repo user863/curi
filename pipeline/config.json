@@ -384,8 +384,8 @@
   },
   "europeana_galleries": {
     "name": "europeana-galleries",
-    "take": 3000,
-    "max_per_group": 60,
+    "take": 12000,
+    "max_per_group": 500,
     "workers": 16,
     "tones": [
       "ink",
