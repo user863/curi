@@ -176,8 +176,8 @@ export const onboardingHtml = (rooms, samples) => {
     return `<button type="button" class="tile" data-room="${esc(room)}" aria-pressed="false">${inner}<span class="label">${esc(label)}</span></button>`;
   };
   return `<div class="inner">
-    <h1>What are you curious about?</h1>
-    <p class="dim">Choose at least two. It stays on this device.</p>
+    <h1>What are you interested in?</h1>
+    <p class="dim">Choose at least two.</p>
     <div class="tiles">${Object.entries(rooms).map(([r, l]) => tile(r, l)).join('')}</div>
     <div class="foot"><button type="button" class="btn" id="start" disabled>Start</button>
     <button type="button" class="linkish" id="skip">Skip</button></div></div>`;
