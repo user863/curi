@@ -5,8 +5,9 @@ import * as V from './views.js';
 import * as Captions from './captions.js';
 import * as Subtitles from './subtitles.js';
 
-const SESSION = 20; // cards before a stopping point
 const AHEAD = 2; // cards rendered ahead of the active one
+const RETAIN = 4; // cards kept rendered behind it; older ones are released so a long scroll stays light
+const ONBOARDING = false; // true: ask which rooms to start from. Off: the feed starts from an even mix
 const TAP_MS = 260;
 const DWELL_MIN_S = 3;
 const UI_HIDE_MS = 4000;
@@ -30,7 +31,6 @@ let state = load();
 let shown = []; // { card, n, reason, el } in feed order
 const shownIds = new Set();
 let endEl = null;
-let budget = SESSION;
 let active = null;
 let activeSince = 0;
 let lastFocus = null;
@@ -197,7 +197,7 @@ const wantCaptions = () => {
     id: s.card.id, url: s.card.media.url, fallback: s.card.media.fallback || '', start: s.card.media.start, end: s.card.media.end,
   })), (id) => {
     const entry = shown.find((s) => s.card.id === id);
-    if (entry) Subtitles.render(entry.el, Captions.stateOf(id));
+    if (entry && !entry.el.dataset.gone) Subtitles.render(entry.el, Captions.stateOf(id));
   });
 };
 
@@ -215,12 +215,10 @@ const io = new IntersectionObserver(
   { root: feed, threshold: [0.6] },
 );
 
-const mount = (html) => {
+const build = (html) => {
   const tpl = document.createElement('template');
   tpl.innerHTML = html.trim();
   const el = tpl.content.firstElementChild;
-  feed.append(el);
-  io.observe(el);
   const img = el.querySelector('img.art');
   if (img) {
     const ready = () => img.classList.add('ready');
@@ -233,21 +231,52 @@ const mount = (html) => {
   return el;
 };
 
+const mount = (html) => {
+  const el = build(html);
+  feed.append(el);
+  io.observe(el);
+  return el;
+};
+
+// A released card keeps its place (same height) but frees its image or media.
+const release = (entry) => {
+  const stub = document.createElement('section');
+  stub.className = 'card';
+  Object.assign(stub.dataset, { gone: 'yes', id: entry.card.id, type: entry.card.type, tone: entry.card.editorial.tone });
+  entry.el.querySelectorAll('video, audio').forEach((m) => { m.pause(); m.removeAttribute('src'); m.load(); });
+  io.unobserve(entry.el);
+  entry.el.replaceWith(stub);
+  io.observe(stub);
+  return { ...entry, el: stub };
+};
+
+// Scrolled back to a released card: draw it again; the observer then activates the new element.
+const revive = (stub) => {
+  const entry = shown.find((s) => s.el === stub);
+  if (!entry) return;
+  const el = build(V.cardHtml(entry.card));
+  io.unobserve(stub);
+  stub.replaceWith(el);
+  io.observe(el);
+  shown = shown.map((s) => (s === entry ? { ...s, el } : s));
+};
+
+const releaseBehind = () => {
+  const keep = activeIndex() - RETAIN;
+  shown = shown.map((s, i) => (i < keep && !s.el.dataset.gone ? release(s) : s));
+};
+
 const unmount = (el) => {
   io.unobserve(el);
   el.remove();
 };
 
-const appendEnd = (exhausted) => {
-  endEl = mount(V.endCardHtml(shown.length, state.saved.length, exhausted));
+const appendEnd = () => {
+  endEl = mount(V.endCardHtml(shown.length, state.saved.length));
 };
 
 // Ranks and mounts the next card. Returns 'yes' | 'no' (an end card was added) | 'stale' (feedback arrived meanwhile).
 const appendNext = async () => {
-  if (shown.length >= budget) {
-    appendEnd(false);
-    return 'no';
-  }
   const stamp = epoch;
   let pick = rank();
   if (!pick && (await catalog.ensureClusters({ profile: state.profile, shares: mix(), want: Infinity, maxNew: 4 }))) pick = rank();
@@ -256,7 +285,7 @@ const appendNext = async () => {
     pick = rank();
   }
   if (!pick) {
-    appendEnd(true);
+    appendEnd();
     return 'no';
   }
   const card = await catalog.getCard(pick.id);
@@ -324,6 +353,7 @@ const finishDwell = () => {
 
 const activate = (el) => {
   if (el === active) return;
+  if (el.dataset.gone) return revive(el);
   finishDwell();
   active = el;
   activeSince = performance.now();
@@ -334,6 +364,7 @@ const activate = (el) => {
   if (entry && !hasBit(state.seen, entry.n)) update({ seen: withBit(state.seen, entry.n) });
   syncDock();
   fillAhead();
+  releaseBehind();
   syncMedia(el);
   warmNext();
   wantCaptions();
@@ -393,24 +424,17 @@ const ring = (el, e) => {
   dot.addEventListener('animationend', () => dot.remove(), { once: true });
 };
 
-const newSession = async (fresh) => {
-  if (fresh) {
-    epoch += 1;
-    shown.forEach((s) => unmount(s.el));
-    shown = [];
-    shownIds.clear();
-    active = null;
-    update({ seen: new Uint8Array(0) });
-    budget = SESSION;
-  } else {
-    budget += SESSION;
-  }
-  const old = endEl;
+const startOver = async () => {
+  epoch += 1;
+  shown.forEach((s) => unmount(s.el));
+  shown = [];
+  shownIds.clear();
+  active = null;
+  update({ seen: new Uint8Array(0) });
+  if (endEl) unmount(endEl);
   endEl = null;
   await fillAhead();
-  const target = fresh ? shown[0]?.el : old?.nextElementSibling;
-  if (old) unmount(old);
-  (target || shown[0]?.el)?.scrollIntoView({ block: 'start' });
+  shown[0]?.el.scrollIntoView({ block: 'start' });
 };
 
 const withDetail = (card, d = {}) => ({
@@ -491,7 +515,7 @@ feed.addEventListener('click', (e) => {
   const el = e.target.closest('.card');
   if (!el || e.target.closest('a')) return;
   const btn = e.target.closest('button[data-act]');
-  if (btn?.dataset.act === 'more-session') return newSession(btn.textContent === 'Start over');
+  if (btn?.dataset.act === 'more-session') return startOver();
   if (btn?.dataset.act === 'play') return setUi(!togglePlay(el));
   const line = e.target.closest('.reader p[data-t]');
   if (line) return seekTo(el, line);
@@ -650,7 +674,7 @@ const init = async () => {
   app.classList.toggle('cc', Captions.available);
   requestAnimationFrame(follow);
   syncSaved();
-  if (state.onboarded === 'unknown') await showOnboarding();
+  if (ONBOARDING && state.onboarded === 'unknown') await showOnboarding();
   else await begin();
 };
 

@@ -95,13 +95,13 @@ export const cardHtml = (card) => {
   </section>`;
 };
 
-export const endCardHtml = (count, savedCount, exhausted) => `
-  <section class="card end" data-id="end" data-type="end" data-tone="paper" aria-label="End of this session">
+export const endCardHtml = (count, savedCount) => `
+  <section class="card end" data-id="end" data-type="end" data-tone="paper" aria-label="End of the feed">
     <div class="text md">
-      <p>${exhausted ? "That's everything for now." : "That's enough for now."}</p>
+      <p>That's everything for now.</p>
       <p class="dim">${count} cards${savedCount ? `, ${savedCount} saved` : ''}.</p>
     </div>
-    <div class="meta"><button type="button" class="btn" data-act="more-session">${exhausted ? 'Start over' : 'Keep going'}</button></div>
+    <div class="meta"><button type="button" class="btn" data-act="more-session">Start over</button></div>
   </section>`;
 
 const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>` : '');
