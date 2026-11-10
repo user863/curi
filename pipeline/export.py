@@ -73,13 +73,24 @@ def detail_of(r, media):
         d["media"] = {"medium": media["medium"], "dimensions": media["dimensions"], "culture": media["culture"]}
     return d
 
-def index_shard(rows, cat_ids, room_order):
-    """[count u32][ids u32*n][cat u8*n][room u8*n][quality u8*n][pad to 4][emb i8*n*DIM]"""
+NOBODY = re.compile(r"^(|unknown.*|anonymous.*|anonym.*|unidentified.*|unbekannt.*|desconegut|okänd|various.*)$")
+NO_CREATOR = 0xFFFF
+
+def creator_key(name):
+    key = (name or "").strip().lower()
+    return None if NOBODY.match(key) else key
+
+def index_shard(rows, cat_ids, room_order, source_ids, creator_ids):
+    """[count u32][ids u32*n][cat u8*n][room u8*n][quality u8*n][source u8*n][pad to 2][creator u16*n][pad to 4][emb i8*n*DIM]
+    source: institution id (manifest order); creator: id of the normalised name, 0xFFFF when unknown."""
     n = len(rows)
     body = struct.pack(f"<{n}I", *(r["id"] for r in rows))
     body += bytes(cat_ids.index(r["category"]) for r in rows)
     body += bytes(room_order.index(r["room"]) for r in rows)
     body += bytes(max(0, min(255, round((r["quality"] - 1) * 250))) for r in rows)  # decode: 1 + v/250
+    body += bytes(source_ids[r["institution"]] for r in rows)
+    body += b"\0" * (-len(body) % 2)
+    body += struct.pack(f"<{n}H", *(creator_ids.get(creator_key(r["creator"]), NO_CREATOR) for r in rows))
     body += b"\0" * (-len(body) % 4)
     return struct.pack("<I", n) + body + b"".join(r["vec"] for r in rows)
 
@@ -107,6 +118,12 @@ def write(conn, out_dir):
     present = {r["room"] for r in rows}
     room_order = [r for r in labels if r in present]  # display order from rooms.json
     cat_ids = [c["id"] for c in CATEGORIES]
+    sources = sorted({r["institution"] for r in rows})
+    assert len(sources) <= 256, "source id no longer fits a byte"
+    source_ids = {name: i for i, name in enumerate(sources)}
+    creators = sorted({k for k in (creator_key(r["creator"]) for r in rows) if k})
+    assert len(creators) < NO_CREATOR, "creator id no longer fits two bytes"
+    creator_ids = {name: i for i, name in enumerate(creators)}
 
     by_cluster = collections.defaultdict(list)
     for r in rows:
@@ -117,7 +134,7 @@ def write(conn, out_dir):
     counts, mean_quality, sizes = [], [], []
     for cl in cl_ids:
         members = by_cluster[cl]
-        shards["idx"].append(put(out, "idx", cl, "bin", index_shard(members, cat_ids, room_order)))
+        shards["idx"].append(put(out, "idx", cl, "bin", index_shard(members, cat_ids, room_order, source_ids, creator_ids)))
         card_json = {r["id"]: card_of(r, tags[r["id"]], media.get(r["id"]), text.get(r["id"])) for r in members}
         detail_json = {r["id"]: detail_of(r, media.get(r["id"])) for r in members}
         dump = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":")).encode()
@@ -158,7 +175,7 @@ def write(conn, out_dir):
     rev = int(conn.execute("SELECT value FROM meta WHERE key='rev'").fetchone()["value"])
     manifest = {
         "rev": rev, "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "count": len(rows), "dim": DIM, "model": MODEL,
+        "count": len(rows), "dim": DIM, "model": MODEL, "idxVersion": 2,
         "clusters": {"ids": cl_ids, "centroids": f"centroids.{cent_hash}.i8", "idx": shards["idx"],
                      "cards": shards["cards"], "detail": shards["detail"], "counts": counts,
                      "quality": mean_quality, "sizes": sizes},

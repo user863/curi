@@ -9,6 +9,13 @@ const sigmoid = (x) => 1 / (1 + Math.exp(-x));
 
 const WANT_PER_CATEGORY = 300; // works to have in memory per category when it has an equal share
 const MIN_WANT = 100;
+const COVERAGE_POOL = 60; // coverage picks are drawn from this many farthest clusters, so readers differ
+
+const dotCent = ({ dim, cent }, a, b) => {
+  let s = 0;
+  for (let d = 0; d < dim; d++) s += cent[a * dim + d] * cent[b * dim + d];
+  return s;
+};
 
 // Interest of a cluster: same curve as work scoring, times mean quality.
 const priority = (info, j, profile, rng) => {
@@ -46,11 +53,16 @@ export const planClusters = ({ info, profile, shares, categories, loaded, want, 
       info.counts[j].forEach((n, cc) => { have[cc] += n; });
     }
   });
+  // Coverage: the clusters farthest from everything loaded or chosen, so the pool cannot narrow to the same regions.
   const pool = order.filter(([j]) => !loaded.has(info.ids[j]) && !taken.has(j));
+  const held = [...loaded].map((id) => info.ids.indexOf(id)).concat(chosen).filter((j) => j >= 0);
   for (let e = 0; e < explore && pool.length && chosen.length < maxNew + explore; e++) {
-    const i = Math.floor(rng() * pool.length);
-    chosen.push(pool[i][0]);
-    pool.splice(i, 1);
+    const near = (j) => held.reduce((m, h) => Math.max(m, dotCent(info, j, h)), -1);
+    const far = pool.map(([j], p) => [p, 1 - near(j) + info.quality[j] / 1000]).sort((a, b) => b[1] - a[1]).slice(0, COVERAGE_POOL);
+    const [at] = far[Math.floor(rng() * far.length)];
+    chosen.push(pool[at][0]);
+    held.push(pool[at][0]);
+    pool.splice(at, 1);
   }
   return chosen.map((j) => info.ids[j]);
 };

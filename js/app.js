@@ -1,6 +1,6 @@
 import { loadCatalog } from './catalog.js';
 import { load, save as persist, hasBit, withBit } from './store.js';
-import { pickNext, scoreAll, shares, learn, withRoom, forgetInterest, emptyProfile, explain } from './rank.js';
+import { pickNext, scoreAll, shares, learn, withRoom, forgetInterest, emptyProfile, explain, age } from './rank.js';
 import * as V from './views.js';
 import * as Captions from './captions.js';
 import * as Subtitles from './subtitles.js';
@@ -1224,6 +1224,7 @@ $('.bar').addEventListener('pointerup', () => { if (app.classList.contains('ui')
 const init = async () => {
   emit('start');
   catalog = await loadCatalog();
+  update({ profile: age(state.profile, Math.round(Date.now() / 1000)) }); // time passed since the last session
   app.dataset.nav = state.nav;
   app.classList.toggle('cc', Captions.available);
   await restoreFilter();

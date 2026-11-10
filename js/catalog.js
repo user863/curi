@@ -9,10 +9,9 @@ const concat = (Type, parts, total) => {
   return out;
 };
 
+// Index shard, version 2: see pipeline/export.py index_shard.
 const parseShard = (buf, dim) => {
   const n = new DataView(buf).getUint32(0, true);
-  const bodyLen = 7 * n;
-  const pad = (4 - (bodyLen % 4)) % 4;
   let o = 4;
   const ids = new Uint32Array(buf, o, n);
   o += 4 * n;
@@ -21,8 +20,13 @@ const parseShard = (buf, dim) => {
   const room = new Uint8Array(buf, o, n);
   o += n;
   const quality = new Uint8Array(buf, o, n);
-  o += n + pad;
-  return { n, ids, cat, room, quality, emb: new Int8Array(buf, o, n * dim) };
+  o += n;
+  const source = new Uint8Array(buf, o, n);
+  o += n + (o + n) % 2;
+  const creator = new Uint16Array(buf, o, n);
+  o += 2 * n;
+  o += (4 - (o % 4)) % 4;
+  return { n, ids, cat, room, quality, source, creator, emb: new Int8Array(buf, o, n * dim) };
 };
 
 export const loadCatalog = async (base = 'data/pack') => {
@@ -58,7 +62,7 @@ export const loadCatalog = async (base = 'data/pack') => {
   const view = {
     manifest, dim, categories: manifest.categories, rooms: manifest.rooms, blocked, stats, info,
     n: 0, version: 0, ids: new Uint32Array(0), cat: new Uint8Array(0), room: new Uint8Array(0),
-    quality: new Uint8Array(0), emb: new Int8Array(0),
+    quality: new Uint8Array(0), source: new Uint8Array(0), creator: new Uint16Array(0), emb: new Int8Array(0),
   };
   const loaded = new Map(); // cluster id -> shard
   const inflight = new Map();
@@ -73,6 +77,8 @@ export const loadCatalog = async (base = 'data/pack') => {
     view.cat = concat(Uint8Array, parts.map(([, p]) => p.cat), total);
     view.room = concat(Uint8Array, parts.map(([, p]) => p.room), total);
     view.quality = concat(Uint8Array, parts.map(([, p]) => p.quality), total);
+    view.source = concat(Uint8Array, parts.map(([, p]) => p.source), total);
+    view.creator = concat(Uint16Array, parts.map(([, p]) => p.creator), total);
     view.emb = concat(Int8Array, parts.map(([, p]) => p.emb), total * dim);
     pos = new Map();
     owner = new Map();

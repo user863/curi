@@ -57,7 +57,7 @@ Cluster assignments are stable: new works join the nearest existing cluster, so 
 |---|---|---|
 | `manifest.json` | revision, shard hashes, per-cluster category counts and mean quality, rooms, room tile previews, tombstones | At launch (53 KB at 100k works) |
 | `centroids.<hash>.i8` | one 64-dim vector per cluster | At launch (50 KB at 100k) |
-| `idx/<cluster>.<hash>.bin` | typed arrays for the cluster's works: ids, category, room, quality, embeddings (71 bytes per work) | The clusters nearest the user's interests |
+| `idx/<cluster>.<hash>.bin` | typed arrays for the cluster's works: ids, category, room, quality, source, creator, embeddings (74 bytes per work; `idxVersion` 2) | The clusters nearest the user's interests |
 | `cards/<cluster>.<hash>.json` | display fields | When a work from the cluster is shown |
 | `detail/<cluster>.<hash>.json` | rights, source, spec rows | When Note opens |
 

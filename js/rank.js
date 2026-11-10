@@ -9,11 +9,19 @@ const DWELL_PER_S = 0.02;
 const DWELL_CAP = 0.15; // dwell stays a weak signal
 const DECAY = 0.98;
 const CLAMP = 6;
-const K_POS = 6;
-const K_NEG = 3;
+const K_POS = 8;
+const K_NEG = 4;
 const MERGE_COS = 0.55; // feedback within this cosine of a centroid moves it instead of adding one
 const ETA = 0.3;
 const MAX_LABELS = 12;
+
+const FACET_HALF_LIFE_DAYS = 30; // an interest not touched for a month counts half
+const COUNTER_HALF_LIFE_DAYS = 60; // category lean
+const MIN_WEIGHT = 0.2; // a faded interest below this is dropped (unless picked by room)
+
+const SOURCE_CAP = { window: 10, most: 2 }; // cards from one source in the last 10
+const CREATOR_CAP = { window: 20, most: 1 }; // and from one creator in the last 20
+const NO_CREATOR = 0xffff;
 
 const CAT_SENSITIVITY = 0.35; // how fast the mix follows interest
 const CAT_FLOOR = 0.1; // no category drops below this share
@@ -42,6 +50,18 @@ export const featuresOf = (card) => [`r:${card.editorial.room}`, ...card.editori
 
 export const emptyProfile = () => ({ cents: [], negs: [], cat: {}, ver: 0 });
 
+// Time passes: interests and category lean fade (now in seconds). Called once at the start of a session.
+export const age = (profile, now) => {
+  const days = (now - (profile.at ?? now)) / 86400;
+  if (!(days > 0)) return { ...profile, at: now };
+  const keep = (halfLife) => 0.5 ** (days / halfLife);
+  const fade = (list) => list.map((c) => ({ ...c, w: weightOf(c) * keep(FACET_HALF_LIFE_DAYS) })).filter((c) => c.room || c.w >= MIN_WEIGHT);
+  const cat = Object.fromEntries(Object.entries(profile.cat).map(([k, v]) => [k, v * keep(COUNTER_HALF_LIFE_DAYS)]));
+  return { ...profile, cents: fade(profile.cents), negs: fade(profile.negs), cat, at: now, ver: profile.ver + 1 };
+};
+
+const weightOf = (c) => c.w ?? c.n; // profiles saved before weights count their number of touches
+
 const merge = (list, vec, delta, labels, cap, extra, create = Math.abs(delta) >= 1) => {
   const hard = Math.abs(delta) >= 1;
   const sims = list.map((c) => dot(c.v, vec));
@@ -52,16 +72,19 @@ const merge = (list, vec, delta, labels, cap, extra, create = Math.abs(delta) >=
     const v = unit(c.v.map((x, i) => x + ETA * Math.abs(delta) * vec[i]));
     const bump = (obj) => labels.reduce((o, l) => ({ ...o, [l]: (o[l] || 0) + 1 }), obj);
     return list.map((x, i) => (i === best
-      ? { ...x, v, n: x.n + 1, labels: top(bump(x.labels), MAX_LABELS), saves: (x.saves || 0) + (extra.saves || 0), mores: (x.mores || 0) + (extra.mores || 0),
+      ? { ...x, v, n: x.n + 1, w: weightOf(x) + Math.abs(delta), labels: top(bump(x.labels), MAX_LABELS), saves: (x.saves || 0) + (extra.saves || 0), mores: (x.mores || 0) + (extra.mores || 0),
           hard: x.hard || hard, soft: !(x.hard || hard || x.n + 1 >= SOFT_CONFIRM) }
       : x));
   }
   if (!create) return list; // weak positive signals only refine existing interests
-  const fresh = { v: vec, n: 1, labels: counted, saves: extra.saves || 0, mores: extra.mores || 0, hard, soft: !hard };
-  if (list.length >= cap) { // a soft dislike never pushes out an interest or a firm dislike
-    const soft = list.findIndex((c) => c.soft);
-    if (soft < 0 && fresh.soft) return list;
-    return [...list.filter((_, j) => j !== (soft < 0 ? 0 : soft)), fresh];
+  const fresh = { v: vec, n: 1, w: Math.abs(delta), labels: counted, saves: extra.saves || 0, mores: extra.mores || 0, hard, soft: !hard };
+  if (list.length >= cap) { // the lightest goes; a soft dislike never pushes out an interest or a firm dislike
+    const lightest = (rows) => rows.reduce((a, b) => (weightOf(b[0]) < weightOf(a[0]) ? b : a));
+    const indexed = list.map((c, j) => [c, j]);
+    const soft = indexed.filter(([c]) => c.soft);
+    if (!soft.length && fresh.soft) return list;
+    const [, out] = lightest(soft.length ? soft : indexed);
+    return [...list.filter((_, j) => j !== out), fresh];
   }
   return [...list, fresh];
 };
@@ -87,7 +110,7 @@ export const withRoom = (profile, room, on, centroid, categories) => {
   if (rest.length < profile.cents.length) return profile;
   const cat = { ...profile.cat };
   Object.entries(categories).forEach(([c, share]) => { cat[c] = clamp((cat[c] || 0) + share); });
-  const seeded = { v: unit(centroid), n: 1, labels: { [`r:${room}`]: 3 }, room, saves: 0, mores: 0 };
+  const seeded = { v: unit(centroid), n: 1, w: 3, labels: { [`r:${room}`]: 3 }, room, saves: 0, mores: 0 };
   return { ...profile, cat, cents: [...rest, seeded].slice(-K_POS), ver: profile.ver + 1 };
 };
 
@@ -149,10 +172,10 @@ const rowCos = (emb, dim, a, b) => {
 };
 
 // Best m untaken works of one category, by score.
-const topInCategory = (index, scores, catCode, taken, m) => {
+const topInCategory = (index, scores, catCode, taken, m, skip) => {
   const best = [];
   for (let i = 0; i < index.n; i++) {
-    if (index.cat[i] !== catCode || taken(index.ids[i])) continue;
+    if (index.cat[i] !== catCode || taken(index.ids[i]) || skip(i)) continue;
     const s = scores[i];
     if (best.length === m && s <= best[m - 1][1]) continue;
     let j = best.length;
@@ -164,17 +187,28 @@ const topInCategory = (index, scores, catCode, taken, m) => {
 };
 
 // Random-but-excellent: a high-quality work from a random sample, outside the top list.
-const explore = (index, catCode, taken, rng, exclude) => {
+const explore = (index, catCode, taken, rng, exclude, skip) => {
   let pick = null;
   for (let t = 0; t < EXPLORE_SAMPLE; t++) {
     const i = Math.floor(rng() * index.n);
-    if (index.cat[i] !== catCode || exclude.has(i) || taken(index.ids[i]) || index.quality[i] < EXPLORE_MIN_QUALITY) continue;
+    if (index.cat[i] !== catCode || exclude.has(i) || skip(i) || taken(index.ids[i]) || index.quality[i] < EXPLORE_MIN_QUALITY) continue;
     if (!pick || index.quality[i] > index.quality[pick]) pick = i;
   }
   return pick;
 };
 
+// Rows that would repeat a source or a creator too soon: at most 2 per source in 10, 1 per creator in 20.
+// Returns the two checks apart, so the creator check can be relaxed first (a category may hold few authors).
+const repeats = (index, shown) => {
+  if (!index.source) return { source: () => false, creator: () => false };
+  const rows = shown.map((id) => index.posOf(id)).filter((p) => p >= 0);
+  const sources = rows.slice(-SOURCE_CAP.window).reduce((m, p) => m.set(index.source[p], (m.get(index.source[p]) ?? 0) + 1), new Map());
+  const creators = new Set(rows.slice(-CREATOR_CAP.window).map((p) => index.creator[p]).filter((c) => c !== NO_CREATOR));
+  return { source: (i) => (sources.get(index.source[i]) ?? 0) >= SOURCE_CAP.most, creator: (i) => creators.has(index.creator[i]) };
+};
+
 // Next work: choose the category furthest below its share in the recent window, then the best work in it.
+// In a category with nothing left under both caps, the creator cap goes first, then the source cap, before another category is tried.
 export const pickNext = ({ index, profile, scores, taken, shown, rng, only = null }) => { // only: category ids to draw from, or null
   const ids = index.categories.map((c) => c.id);
   const share = shares(profile, ids);
@@ -182,18 +216,24 @@ export const pickNext = ({ index, profile, scores, taken, shown, rng, only = nul
   const deficit = ids.map((id, k) => [k, share[id] - (recent.length ? recent.filter((c) => c === k).length / recent.length : 0) + rng() * JITTER]);
   deficit.sort((a, b) => b[1] - a[1]);
   const last = shown.slice(-RECENT).map((id) => index.posOf(id));
-  for (const [k] of only ? deficit.filter(([k]) => only.includes(ids[k])) : deficit) {
-    const list = topInCategory(index, scores, k, taken, TOP_M);
-    if (!list.length) continue;
-    if (shown.length >= 2 && rng() < EXPLORE_RATE) {
-      const i = explore(index, k, taken, rng, new Set(list.map(([p]) => p)));
-      if (i !== null) return { pos: i, id: index.ids[i], category: ids[k], share: share[ids[k]], exploring: true };
+  const cap = repeats(index, shown);
+  const attempt = (levels) => {
+    for (const [k] of only ? deficit.filter(([k]) => only.includes(ids[k])) : deficit) {
+      for (const skip of levels) {
+        const list = topInCategory(index, scores, k, taken, TOP_M, skip);
+        if (!list.length) continue;
+        if (shown.length >= 2 && rng() < EXPLORE_RATE) {
+          const i = explore(index, k, taken, rng, new Set(list.map(([p]) => p)), skip);
+          if (i !== null) return { pos: i, id: index.ids[i], category: ids[k], share: share[ids[k]], exploring: true };
+        }
+        const value = ([i, s]) => s + rng() * JITTER - MMR_LAMBDA * (last.length ? Math.max(...last.map((j) => rowCos(index.emb, index.dim, i, j))) : 0);
+        const [pos] = list.map((e) => [e[0], value(e)]).reduce((a, b) => (b[1] > a[1] ? b : a));
+        return { pos, id: index.ids[pos], category: ids[k], share: share[ids[k]], exploring: false };
+      }
     }
-    const value = ([i, s]) => s + rng() * JITTER - MMR_LAMBDA * (last.length ? Math.max(...last.map((j) => rowCos(index.emb, index.dim, i, j))) : 0);
-    const [pos] = list.map((e) => [e[0], value(e)]).reduce((a, b) => (b[1] > a[1] ? b : a));
-    return { pos, id: index.ids[pos], category: ids[k], share: share[ids[k]], exploring: false };
-  }
-  return null;
+    return null;
+  };
+  return attempt([(i) => cap.source(i) || cap.creator(i), cap.source]) ?? attempt([() => false]);
 };
 
 // Why this card: the closest interest, named by the label it shares with the card.

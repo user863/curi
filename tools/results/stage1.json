@@ -1,0 +1,40 @@
+{
+ "label": "stage 1: repeat caps, decay, weight eviction, coverage",
+ "rev": 45,
+ "works": 58889,
+ "readers": 1000,
+ "cards": 100,
+ "seed": 1,
+ "metrics": {
+  "firstSave": 11,
+  "noSave": 0.028,
+  "regret": 0.37331768901338813,
+  "utilityOracle": 0.880361516062022,
+  "utilityRandom": 0.4457735895882236,
+  "variety": 0.8481659590113799,
+  "varietyCatalogue": 0.6925453130195636,
+  "sourcePer10": 1.9966813186813186,
+  "sourceOver": 0,
+  "creatorPer20": 1.0003086419753087,
+  "creatorOver": 0.00030864197530864197,
+  "coverage": 0.8470149253731343,
+  "exposureGini": 0.9192422368009658,
+  "overlap50": 0.05676352206551933,
+  "categoryGap": 8.637855940630336,
+  "categories": {
+   "visual": 0.23576,
+   "text": 0.15596,
+   "video": 0.31345,
+   "audio": 0.29483
+  },
+  "modern": 0.5624,
+  "undated": 0.24073,
+  "modernCatalogue": 0.417718079777208,
+  "undatedCatalogue": 0.49362359693660957,
+  "starterQuality": null,
+  "saveRate": 0.1240400000000002,
+  "skipRate": 0.22497999999999965,
+  "utility": 0.5070438270486333,
+  "indexKB": 884.2901796875
+ }
+}
