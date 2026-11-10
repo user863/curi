@@ -13,6 +13,18 @@ struct WebView: UIViewRepresentable {
         try? AVAudioSession.sharedInstance().setActive(true)
         config.setURLSchemeHandler(BundleSchemeHandler(), forURLScheme: BundleSchemeHandler.scheme)
         config.userContentController.add(context.coordinator.captions, name: "captions")
+        // Console warnings and errors from the page go to the system log, so a problem on the phone can be read from the Mac.
+        config.userContentController.add(context.coordinator.log, name: "log")
+        config.userContentController.addUserScript(WKUserScript(source: """
+            ['warn', 'error'].forEach(function (level) {
+              var original = console[level];
+              console[level] = function () {
+                try { window.webkit.messageHandlers.log.postMessage(level + ': ' + Array.prototype.slice.call(arguments).join(' ')); } catch (e) {}
+                original.apply(console, arguments);
+              };
+            });
+            window.addEventListener('error', function (e) { try { window.webkit.messageHandlers.log.postMessage('error: ' + e.message + ' @' + e.filename + ':' + e.lineno); } catch (x) {} });
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: .zero, configuration: config)
         context.coordinator.captions.webView = view
         view.scrollView.contentInsetAdjustmentBehavior = .never
@@ -32,6 +44,7 @@ struct WebView: UIViewRepresentable {
     // External links open in Safari; the app stays on its own scheme.
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let captions = CaptionBridge()
+        let log = PageLog()
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {

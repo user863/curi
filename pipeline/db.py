@@ -31,12 +31,15 @@ CREATE TABLE IF NOT EXISTS work_tag(work_id INTEGER REFERENCES work(id), tag_id 
 CREATE TABLE IF NOT EXISTS work_embedding(work_id INTEGER PRIMARY KEY REFERENCES work(id), model TEXT, dim INTEGER, vec BLOB);
 """
 
-def connect(path):
-    conn = sqlite3.connect(path)
+def connect(path, timeout=60, shared=False):
+    """shared: one connection used by several threads (the caller serialises writes with a lock)."""
+    conn = sqlite3.connect(path, timeout=timeout, check_same_thread=not shared)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
     if "cluster" not in [r["name"] for r in conn.execute("PRAGMA table_info(work)")]:
         conn.execute("ALTER TABLE work ADD COLUMN cluster INTEGER")
+    if "swatch" not in [r["name"] for r in conn.execute("PRAGMA table_info(work)")]:
+        conn.execute("ALTER TABLE work ADD COLUMN swatch TEXT")  # border colour of the picture, from pipeline/swatch.py
     if "license_url" not in [r["name"] for r in conn.execute("PRAGMA table_info(work_rights)")]:
         conn.execute("ALTER TABLE work_rights ADD COLUMN license_url TEXT")
     return conn

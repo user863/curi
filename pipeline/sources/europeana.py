@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .. import probe, quality, rights, secrets, state, taxonomy
 from ..http import get_json, get_range
 from . import visual
+from .archive import excerpt
 from .common import reject, stable_pick
 
 API = "https://api.europeana.eu/record/v2/search.json"
@@ -15,6 +16,8 @@ def search(key, src, extra, rows):
               ("rows", rows), ("profile", extra.pop("profile", "rich"))]
     if src.get("theme"):
         params.append(("theme", src["theme"]))
+    if src.get("concept"):
+        params.append(("qf", f'skos_concept:"http://data.europeana.eu/concept/{src["concept"]}"'))
     if src.get("min_tier"):
         params.append(("qf", f"contentTier:{src['min_tier']}"))
     params += list(extra.items())
@@ -31,6 +34,13 @@ def first(v):
 def english(it, key):
     return (it.get(key) or {}).get("en") or []
 
+PLAYER_HOSTS = ("vimeo.com", "youtu.be", "youtube.com", "euscreen.eu", "av.tib.eu", "polimedia.upv.es", "dailymotion.com")
+
+def is_file(url):
+    """A video URL that is a file, not a page with a player."""
+    parts = urllib.parse.urlparse(url)
+    return not any(h in parts.netloc for h in PLAYER_HOSTS) and not parts.path.endswith((".html", ".htm")) and "/player" not in parts.path
+
 def candidate(it, src, today):
     license = rights.license_from_url(first(it.get("rights")))
     if not license:
@@ -40,6 +50,8 @@ def candidate(it, src, today):
     url = first(it.get("edmIsShownBy"))
     if not url.startswith("http"):
         return None, "no-media"
+    if src["kind"] == "video" and not is_file(url):
+        return None, "player-page"
     title, creator = first(it.get("title")), first(it.get("dcCreator"))
     if not title or len(title) < 3:
         return None, "no-title"
@@ -66,7 +78,7 @@ def candidate(it, src, today):
         "source": {"institution": f"{provider} via Europeana", "url": guid, "sourceId": it["id"], "fetchedAt": today,
                    "collection": src.get("theme")},
         "rights": rights.rights(license, "worldwide", rights.attribution(creator, title, license, guid) + f"; {provider} via Europeana", kind),
-        "media": {"kind": kind, "url": url},
+        "media": {"kind": kind, "url": url, **({"poster": first(it.get("edmPreview"))} if kind == "video" else {})},
         "editorial": {"note": desc, "noteSource": "source", "room": src.get("room") or visual.room_of(f"{title} {desc} {' '.join(labels)}", f"{src.get('theme', '')} {' '.join(types)}"),
                       "tags": tags[:6], "tone": visual.tone_of(first(types), cid) if kind == "image" and types else stable_pick(cid, tuple(src["tones"]))},
         "_score": score, "_group": provider, "_source": src["name"],
@@ -79,8 +91,20 @@ def admit(card, src, stats):
     """Probe the media. Images must be web formats under the size budget; audio must stream from an excerpt start."""
     url = card["media"]["url"]
     if card["type"] == "image":
-        verdict = probe.image_ok(url)
+        verdict, secure = probe.secure_image(url)
+        card["media"]["url"] = secure
         return verdict == "yes", verdict
+    if card["type"] == "video":
+        verdict, seconds, size = probe.mp4_info(url)
+        if verdict != "yes":
+            return False, verdict
+        if seconds < src["min_seconds"]:
+            return False, "too-short"
+        if size * 8 / seconds > src["max_bps"]:
+            return False, "too-heavy"  # an excerpt would cost a phone too much data
+        start, end = excerpt(seconds, src)
+        card["media"].update({"duration": round(seconds), "start": start, "end": end})
+        return True, "yes"
     verdict = probe.playable(url, "audio")
     if verdict != "yes":
         return False, verdict
@@ -101,6 +125,8 @@ def safe_admit(card, src, stats):
     except Exception:
         return False, "fetch-failed"
 
+REASON_PREFIX = {"audio": "unplayable", "video": "video"}
+
 def probe_all(cards, src, stats):
     """Keeps the cards whose media loads on a phone; probes in parallel."""
     out = []
@@ -109,7 +135,7 @@ def probe_all(cards, src, stats):
             if ok:
                 out.append(card)
             else:
-                reject(stats, src["name"], f"unplayable-{verdict}" if card["type"] == "audio" else f"image-{verdict}")
+                reject(stats, src["name"], f"{REASON_PREFIX.get(card['type'], 'image')}-{verdict}")
     return out
 
 def run(src, stats):

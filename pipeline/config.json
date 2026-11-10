@@ -344,6 +344,60 @@
         "length_s": 90,
         "whole_if_under": 240
       }
+    },
+    {
+      "name": "europeana-documentary",
+      "concept": "60",
+      "providers": 25,
+      "per_provider": 200,
+      "take": 300,
+      "max_per_group": 80,
+      "tags": [
+        "film",
+        "documentary"
+      ],
+      "type": "VIDEO",
+      "kind": "video",
+      "room": "film",
+      "tones": [
+        "ink",
+        "sky",
+        "mauve"
+      ],
+      "min_seconds": 40,
+      "max_bps": 3000000,
+      "excerpt": {
+        "start_frac": 0.25,
+        "length_s": 45,
+        "whole_if_under": 70
+      },
+      "workers": 12
+    },
+    {
+      "name": "europeana-film",
+      "providers": 30,
+      "per_provider": 300,
+      "take": 800,
+      "max_per_group": 120,
+      "tags": [
+        "film"
+      ],
+      "type": "VIDEO",
+      "kind": "video",
+      "room": "film",
+      "tones": [
+        "ink",
+        "sky",
+        "mauve"
+      ],
+      "min_seconds": 40,
+      "max_bps": 3000000,
+      "excerpt": {
+        "start_frac": 0.25,
+        "length_s": 45,
+        "whole_if_under": 70
+      },
+      "workers": 12
     }
   ],
   "openverse": {

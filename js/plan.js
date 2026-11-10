@@ -25,12 +25,16 @@ const priority = (info, j, profile, rng) => {
 };
 
 // Returns cluster ids (not indices) to fetch, best first.
-export const planClusters = ({ info, profile, shares, categories, loaded, want, explore, maxNew, rng }) => {
+export const planClusters = ({ info, profile, shares, categories, loaded, want, explore, maxNew, rng, must = [] }) => {
   const k = info.ids.length;
   const have = categories.map(() => 0);
   info.ids.forEach((id, j) => { if (loaded.has(id)) info.counts[j].forEach((n, c) => { have[c] += n; }); });
   const chosen = [];
   const taken = new Set();
+  must.forEach((id) => { // clusters a tag filter needs, whatever the interests say
+    const j = info.ids.indexOf(id);
+    if (j >= 0 && !loaded.has(id) && !taken.has(j) && chosen.length < maxNew) { taken.add(j); chosen.push(j); }
+  });
   const order = Array.from({ length: k }, (_, j) => [j, priority(info, j, profile, rng)]).sort((a, b) => b[1] - a[1]);
   categories.forEach((cat, c) => {
     const goal = Math.max(MIN_WANT, Math.round(want * categories.length * (shares[cat.id] ?? 1 / categories.length)));

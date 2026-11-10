@@ -68,7 +68,7 @@ def run(src, stats):
                 else:
                     reject(stats, NAME, why)
     def check(card):
-        verdict = probe.image_ok(card["media"]["url"])
+        verdict, card["media"]["url"] = probe.secure_image(card["media"]["url"])
         return card if verdict == "yes" else reject(stats, NAME, f"image-{verdict}")
     with ThreadPoolExecutor(max_workers=12) as ex:
         return [c for c in ex.map(check, pool) if c]

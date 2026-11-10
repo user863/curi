@@ -1,5 +1,5 @@
 // Device-local state. Nothing leaves the browser.
-// `seen` is a bitset over dense work ids (100k works = 12.5 KB).
+// `seen` and `bad` are bitsets over dense work ids (100k works = 12.5 KB each). `bad`: pictures their source refuses to serve.
 import { emptyProfile } from './rank.js';
 
 const KEY = 'commonplace.v2';
@@ -21,12 +21,12 @@ const toBase64 = (bits) => {
 const fromBase64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 // onboarded: 'yes' | 'no' (skipped) | 'unknown' (not asked yet)
-export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), onboarded: 'unknown' });
+export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), bad: new Uint8Array(0), onboarded: 'unknown', filter: { types: [], tags: [] }, colour: 'palette', sets: false, nav: 'icons' });
 
 export const load = () => {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY));
-    return raw ? { ...initial(), ...raw, seen: raw.seen ? fromBase64(raw.seen) : new Uint8Array(0) } : initial();
+    return raw ? { ...initial(), ...raw, seen: raw.seen ? fromBase64(raw.seen) : new Uint8Array(0), bad: raw.bad ? fromBase64(raw.bad) : new Uint8Array(0) } : initial();
   } catch {
     return initial();
   }
@@ -34,7 +34,7 @@ export const load = () => {
 
 export const save = (state) => {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...state, seen: toBase64(state.seen) }));
+    localStorage.setItem(KEY, JSON.stringify({ ...state, seen: toBase64(state.seen), bad: toBase64(state.bad) }));
   } catch {
     // storage blocked: the session still works, it just won't persist
   }

@@ -4,18 +4,38 @@ from pathlib import Path
 
 CACHE = Path(__file__).parent / ".cache"
 UA = "commonplace-pipeline/0.1 (research prototype)"
+BROWSER_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 _lock = threading.Lock()
 _next = {}  # host -> earliest time of the next request
+_host_min = 0.0  # long jobs: at least this many seconds between requests to one host
+_gap = 0.0  # long jobs: at least this many seconds between any two requests
+_gap_lock = threading.Lock()
+_gap_last = 0.0  # when the last request was actually let through
+
+def configure(per_host=0.0, per_second=0.0):
+    """Stricter spacing for long, unattended jobs: seconds between requests per host, and requests per second overall."""
+    global _host_min, _gap
+    _host_min, _gap = per_host, (1 / per_second if per_second else 0.0)
 
 def _wait(url, interval):
-    """Space requests per host, safe across threads: different hosts proceed in parallel."""
+    """Space requests per host and overall, safe across threads: different hosts proceed in parallel.
+    The per-host slot is reserved first; the overall limit is applied when the request is about to go out, so a
+    request waiting on a busy host never holds up the others."""
+    global _gap_last
     host = urllib.parse.urlparse(url).netloc
     with _lock:
         now = time.time()
         slot = max(_next.get(host, 0.0), now)
-        _next[host] = slot + interval
+        _next[host] = slot + max(interval, _host_min)
     if slot > now:
         time.sleep(slot - now)
+    if _gap:
+        with _gap_lock:
+            now = time.time()
+            send = max(_gap_last + _gap, now)
+            _gap_last = send
+        if send > now:
+            time.sleep(send - now)
 
 def _fetch(url, delay, headers=None):
     for attempt in range(4):
@@ -66,14 +86,29 @@ def get_range(url, nbytes=262144):
     meta.write_text(json.dumps(info))
     return info, data
 
-def get_head(url, nbytes=2048):
+def get_span(url, start, nbytes):
+    """nbytes of a file from an offset, via a Range request. Cached. Returns bytes (may be shorter at the end of the file)."""
+    CACHE.mkdir(exist_ok=True)
+    key = CACHE / hashlib.sha1(f"{url}#span{start}+{nbytes}".encode()).hexdigest()
+    if key.exists():
+        return key.read_bytes()
+    _wait(url, 0.1)
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Range": f"bytes={start}-{start + nbytes - 1}"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        if r.status != 206:
+            raise ValueError("no range support")
+        data = r.read()
+    key.write_bytes(data)
+    return data
+
+def get_head(url, nbytes=2048, ua=UA):
     """Status, content type and total size of a resource, reading at most nbytes of it. Cached as metadata only."""
     CACHE.mkdir(exist_ok=True)
-    meta = CACHE / (hashlib.sha1(f"{url}#head".encode()).hexdigest() + ".meta")
+    meta = CACHE / (hashlib.sha1(f"{url}#head{'' if ua == UA else '#' + ua}".encode()).hexdigest() + ".meta")
     if meta.exists():
         return json.loads(meta.read_text())
     _wait(url, 0.1)
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Range": f"bytes=0-{nbytes - 1}"})
+    req = urllib.request.Request(url, headers={"User-Agent": ua, "Range": f"bytes=0-{nbytes - 1}"})
     with urllib.request.urlopen(req, timeout=40) as r:
         r.read(nbytes)
         total = None

@@ -3,7 +3,7 @@ The client downloads the manifest and the cluster directory (centroids), then on
 per cluster an index shard (typed arrays), a card shard (display fields) and a detail shard (rights, spec rows).
 Shard names contain a content hash, so they are immutable and cacheable, and an update changes only the
 shards whose works changed."""
-import collections, hashlib, json, math, shutil, struct
+import collections, hashlib, json, math, re, shutil, struct, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
@@ -20,6 +20,30 @@ def put(out, folder, stem, ext, data):
     (out / folder / f"{stem}.{h}.{ext}").write_bytes(data)
     return h
 
+# Word index for the app's search: word -> {cluster: [ids]}, in files named by the word's first two letters, so a query
+# fetches only the few files its words start with. js/search.js must tokenise exactly like this.
+STOP = {"the", "and", "of", "de", "la", "le", "les", "el", "del", "der", "die", "das", "den", "het", "een", "van", "von", "und",
+        "des", "du", "et", "en", "in", "on", "at", "to", "for", "with", "by", "from", "an", "is", "are", "was", "his", "her", "its"}
+MAX_DF = 3000  # a word on more works than this narrows nothing
+NOTE_WORDS = 25
+
+def words(text):
+    folded = "".join(c for c in unicodedata.normalize("NFKD", (text or "").lower()) if not unicodedata.combining(c))
+    return [w for w in re.findall(r"[a-z0-9]+", folded) if len(w) >= 2 and w not in STOP]
+
+def write_search(out, rows, tags, labels):
+    postings = collections.defaultdict(lambda: collections.defaultdict(list))
+    for r in rows:
+        found = set(words(f"{r['title']} {r['creator']} {r['institution']} {labels.get(r['room'], '')} {r['date_label']} {' '.join(tags[r['id']])}"))
+        found.update(words(r["note"])[:NOTE_WORDS])
+        for w in found:
+            postings[w][r["cluster"]].append(r["id"])
+    shards = collections.defaultdict(dict)
+    for w, by in postings.items():
+        if sum(map(len, by.values())) <= MAX_DF:
+            shards[w[:2]][w] = {str(c): ids for c, ids in by.items()}
+    return {k: put(out, "search", k, "json", json.dumps(v, separators=(",", ":")).encode()) for k, v in sorted(shards.items())}
+
 def card_of(r, tags, media, text):
     card = {
         "n": r["id"], "cl": r["cluster"], "id": r["uid"], "type": r["type"], "cat": r["category"], "title": r["title"],
@@ -29,6 +53,8 @@ def card_of(r, tags, media, text):
         "editorial": {"note": r["note"], "noteSource": r["note_source"], "room": r["room"], "tags": tags,
                       "tone": r["tone"], "quality": r["quality"]},
     }
+    if r["swatch"]:
+        card["sw"] = r["swatch"]
     if media:
         card["media"] = {"kind": media["kind"], "url": media["url"], "fallback": media["fallback"],
                          "poster": media["poster"], "start": media["start_s"], "end": media["end_s"],
@@ -63,7 +89,7 @@ def write(conn, out_dir):
     out = Path(out_dir)
     if out.exists():
         shutil.rmtree(out)
-    for d in ("idx", "cards", "detail"):
+    for d in ("idx", "cards", "detail", "search"):
         (out / d).mkdir(parents=True)
     rows = conn.execute("""
         SELECT w.*, c.title, c.creator, c.date_label, c.note, c.note_source, c.institution, c.work_title, c.source_url,
@@ -101,6 +127,14 @@ def write(conn, out_dir):
         counts.append([tally.get(c, 0) for c in cat_ids])
         mean_quality.append(round(sum(max(0, min(255, round((r["quality"] - 1) * 250))) for r in members) / len(members)))
         sizes.append(len(members))
+    # Tag vocabulary and postings for the client's filter: tag -> {cluster: [ids]}. Tags on a single work are no use as a filter.
+    postings = collections.defaultdict(lambda: collections.defaultdict(list))
+    for r in rows:
+        for slug in tags[r["id"]]:
+            postings[slug][r["cluster"]].append(r["id"])
+    postings = {s: {str(c): ids for c, ids in by.items()} for s, by in postings.items() if sum(map(len, by.values())) >= 2}
+    tags_hash = put(out, ".", "tags", "json", json.dumps(postings, ensure_ascii=False, separators=(",", ":")).encode())
+    search_hashes = write_search(out, rows, tags, labels)
     cent_bytes = b"".join(cent_rows[cl] for cl in cl_ids)
     cent_hash = put(out, ".", "centroids", "i8", cent_bytes)
 
@@ -128,7 +162,7 @@ def write(conn, out_dir):
         "clusters": {"ids": cl_ids, "centroids": f"centroids.{cent_hash}.i8", "idx": shards["idx"],
                      "cards": shards["cards"], "detail": shards["detail"], "counts": counts,
                      "quality": mean_quality, "sizes": sizes},
-        "categories": CATEGORIES, "roomOrder": room_order,
+        "tags": f"tags.{tags_hash}.json", "search": search_hashes, "categories": CATEGORIES, "roomOrder": room_order,
         "rooms": {r: labels[r] for r in room_order}, "roomCategories": cats_by_room,
         "roomCentroids": centroids, "roomSamples": samples, "tombstones": tombstones,
     }

@@ -3,7 +3,8 @@
 // Interest = a few centroids in embedding space (positive and negative), learned from feedback.
 // Mix = share per category (images, text, film, audio): equal at the start, shifting with interest.
 
-const DELTA = { save: 1, more: 1.5, less: -1.5, note: 0.3 };
+const DELTA = { save: 1, more: 1.5, less: -1.5, note: 0.3, skip: -0.5, finish: 0.4 };
+const SOFT_CONFIRM = 4; // similar skips before a soft dislike counts in full
 const DWELL_PER_S = 0.02;
 const DWELL_CAP = 0.15; // dwell stays a weak signal
 const DECAY = 0.98;
@@ -41,7 +42,8 @@ export const featuresOf = (card) => [`r:${card.editorial.room}`, ...card.editori
 
 export const emptyProfile = () => ({ cents: [], negs: [], cat: {}, ver: 0 });
 
-const merge = (list, vec, delta, labels, cap, extra) => {
+const merge = (list, vec, delta, labels, cap, extra, create = Math.abs(delta) >= 1) => {
+  const hard = Math.abs(delta) >= 1;
   const sims = list.map((c) => dot(c.v, vec));
   const best = sims.length ? sims.indexOf(Math.max(...sims)) : -1;
   const counted = Object.fromEntries(labels.map((l) => [l, 1]));
@@ -50,12 +52,18 @@ const merge = (list, vec, delta, labels, cap, extra) => {
     const v = unit(c.v.map((x, i) => x + ETA * Math.abs(delta) * vec[i]));
     const bump = (obj) => labels.reduce((o, l) => ({ ...o, [l]: (o[l] || 0) + 1 }), obj);
     return list.map((x, i) => (i === best
-      ? { ...x, v, n: x.n + 1, labels: top(bump(x.labels), MAX_LABELS), saves: (x.saves || 0) + (extra.saves || 0), mores: (x.mores || 0) + (extra.mores || 0) }
+      ? { ...x, v, n: x.n + 1, labels: top(bump(x.labels), MAX_LABELS), saves: (x.saves || 0) + (extra.saves || 0), mores: (x.mores || 0) + (extra.mores || 0),
+          hard: x.hard || hard, soft: !(x.hard || hard || x.n + 1 >= SOFT_CONFIRM) }
       : x));
   }
-  if (Math.abs(delta) < 1) return list; // weak signals only refine existing interests
-  const fresh = { v: vec, n: 1, labels: counted, saves: extra.saves || 0, mores: extra.mores || 0 };
-  return [...list, fresh].slice(-cap);
+  if (!create) return list; // weak positive signals only refine existing interests
+  const fresh = { v: vec, n: 1, labels: counted, saves: extra.saves || 0, mores: extra.mores || 0, hard, soft: !hard };
+  if (list.length >= cap) { // a soft dislike never pushes out an interest or a firm dislike
+    const soft = list.findIndex((c) => c.soft);
+    if (soft < 0 && fresh.soft) return list;
+    return [...list.filter((_, j) => j !== (soft < 0 ? 0 : soft)), fresh];
+  }
+  return [...list, fresh];
 };
 
 // event: save | more | less | note | dwell (seconds). vec: unit embedding of the card.
@@ -68,8 +76,8 @@ export const learn = (profile, card, event, vec, seconds = 0) => {
   const labels = featuresOf(card);
   const extra = { saves: event === 'save' ? 1 : 0, mores: event === 'more' ? 1 : 0 };
   return delta > 0
-    ? { ...profile, cat, cents: merge(profile.cents, vec, delta, labels, K_POS, extra), ver: profile.ver + 1 }
-    : { ...profile, cat, negs: merge(profile.negs, vec, delta, labels, K_NEG, {}), ver: profile.ver + 1 };
+    ? { ...profile, cat, cents: merge(profile.cents, vec, delta, labels, K_POS, extra, delta >= 1), ver: profile.ver + 1 }
+    : { ...profile, cat, negs: merge(profile.negs, vec, delta, labels, K_NEG, {}, true), ver: profile.ver + 1 };
 };
 
 // Picking a room in onboarding or Interests seeds a centroid and nudges the mix toward its categories.
@@ -114,11 +122,21 @@ export const scoreAll = (index, profile) => {
     }
     return m / 127;
   };
+  const weights = profile.negs.map((c) => (c.soft ? (c.n / SOFT_CONFIRM) ** 2 : 1)); // a few skips are a hint, not a verdict
+  const dislike = (base) => {
+    let worst = 0;
+    for (let c = 0; c < kn; c++) {
+      let s = 0;
+      const o = c * dim;
+      for (let d = 0; d < dim; d++) s += neg[o + d] * emb[base + d];
+      worst = Math.max(worst, weights[c] * Math.max(0, s / 127 - 0.3));
+    }
+    return worst;
+  };
   for (let i = 0; i < n; i++) {
     const base = i * dim;
     const p = kp ? best(pos, kp, base) : 0;
-    const q = kn ? best(neg, kn, base) : -1;
-    const interest = sigmoid(5 * (p - 0.25 - 0.6 * Math.max(0, q - 0.3)));
+    const interest = sigmoid(5 * (p - 0.25 - 0.6 * (kn ? dislike(base) : 0)));
     out[i] = interest * (1 + quality[i] / 250);
   }
   return out;
@@ -157,14 +175,14 @@ const explore = (index, catCode, taken, rng, exclude) => {
 };
 
 // Next work: choose the category furthest below its share in the recent window, then the best work in it.
-export const pickNext = ({ index, profile, scores, taken, shown, rng, only = null }) => {
+export const pickNext = ({ index, profile, scores, taken, shown, rng, only = null }) => { // only: category ids to draw from, or null
   const ids = index.categories.map((c) => c.id);
   const share = shares(profile, ids);
   const recent = shown.slice(-WINDOW).map((id) => index.cat[index.posOf(id)]);
   const deficit = ids.map((id, k) => [k, share[id] - (recent.length ? recent.filter((c) => c === k).length / recent.length : 0) + rng() * JITTER]);
   deficit.sort((a, b) => b[1] - a[1]);
   const last = shown.slice(-RECENT).map((id) => index.posOf(id));
-  for (const [k] of only ? deficit.filter(([k]) => ids[k] === only) : deficit) {
+  for (const [k] of only ? deficit.filter(([k]) => only.includes(ids[k])) : deficit) {
     const list = topInCategory(index, scores, k, taken, TOP_M);
     if (!list.length) continue;
     if (shown.length >= 2 && rng() < EXPLORE_RATE) {

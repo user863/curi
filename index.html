@@ -13,21 +13,46 @@
 <body>
   <div class="app" id="app" data-tone="paper">
     <header class="bar">
-      <span class="mark">Curi</span>
-      <nav aria-label="Library">
-        <button type="button" id="btn-saved">Saved <span id="saved-count"></span></button>
-        <button type="button" id="btn-interests">Interests</button>
-      </nav>
+      <div class="row">
+        <span class="mark">Curi</span>
+        <nav aria-label="Library">
+          <button type="button" id="btn-saved" aria-label="Saved">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V20l-6-4.2L6 20V4.5a1 1 0 0 1 1-1z"/></svg>
+            <span class="lbl">Saved</span><span id="saved-count"></span>
+          </button>
+          <button type="button" id="btn-settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></svg>
+            <span class="lbl">Settings</span>
+          </button>
+        </nav>
+      </div>
+      <div class="filters" id="filters" aria-label="Filter">
+        <div class="chips-row" id="filter-types" role="group" aria-label="Show"></div>
+        <div class="chips-row" id="filter-tags" role="group" aria-label="Tags">
+          <input id="tag-input" type="text" placeholder="Add tag" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Add a tag">
+        </div>
+        <ul class="suggest" id="tag-suggest" hidden></ul>
+      </div>
     </header>
     <main class="feed" id="feed" tabindex="-1" aria-label="Feed"></main>
-    <div class="dock" id="dock" role="group" aria-label="Card actions">
-      <button type="button" data-act="save" aria-pressed="false">Save</button>
-      <button type="button" data-act="sound" aria-label="Toggle sound" hidden>Sound</button>
-      <button type="button" data-act="more" aria-label="More like this">More</button>
-      <button type="button" data-act="less" aria-label="Less like this">Less</button>
-      <button type="button" data-act="note" aria-label="Curator's note and source">Note</button>
-      <button type="button" data-act="why" aria-label="Why this card">Why</button>
+    <div class="tools" id="tools" role="group" aria-label="Playback" hidden>
+      <button type="button" data-act="sound" aria-label="Toggle sound">Sound</button>
+      <button type="button" data-act="full" aria-label="Full screen" hidden>Full</button>
     </div>
+    <nav class="dock" id="dock" aria-label="Main">
+      <button type="button" data-tab="feed" aria-label="Feed" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3.5" width="12" height="17" rx="2"/><path d="M9.5 8h5M9.5 11.5h5"/></svg><span class="lbl">Feed</span>
+      </button>
+      <button type="button" data-tab="discover" aria-label="Discover">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span class="lbl">Discover</span>
+      </button>
+      <button type="button" data-tab="chat" aria-label="Chat">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H11l-4.5 3.5v-3.5h-2a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z"/></svg><span class="lbl">Chat</span>
+      </button>
+      <button type="button" data-tab="profile" aria-label="Profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-4 3.7-5.8 7-5.8s6.2 1.8 7 5.8"/></svg><span class="lbl">Profile</span>
+      </button>
+    </nav>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <div class="sheet-wrap" id="sheet-wrap" hidden>
       <div class="scrim" data-close></div>
@@ -36,6 +61,37 @@
         <div id="sheet-body"></div>
       </div>
     </div>
+    <section class="search" id="search" hidden aria-label="Discover">
+      <div class="search-top">
+        <input class="search-field" id="search-input" type="search" placeholder="Title, artist, place, tag, word" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search">
+        <button type="button" class="search-close" id="search-close">Close</button>
+      </div>
+      <p class="search-note" id="search-note" aria-live="polite"></p>
+      <div class="search-scroll" id="search-scroll">
+        <div class="hints" id="search-hints"></div>
+        <div class="columns" id="search-columns"></div>
+        <div id="search-sentinel"></div>
+      </div>
+    </section>
+    <section class="search" id="saved" hidden aria-label="Saved">
+      <div class="search-top">
+        <h2 class="view-title">Saved</h2>
+        <button type="button" class="search-close" id="saved-close">Close</button>
+      </div>
+      <p class="search-note" id="saved-note" aria-live="polite"></p>
+      <div class="search-scroll" id="saved-scroll">
+        <div class="columns" id="saved-columns"></div>
+        <div id="saved-sentinel"></div>
+      </div>
+    </section>
+    <section class="page" id="page-chat" hidden aria-label="Chat">
+      <h2>Chat</h2>
+      <p>Talk with Curi about what you are looking at. Coming soon.</p>
+    </section>
+    <section class="page" id="page-profile" hidden aria-label="Profile">
+      <h2>Profile</h2>
+      <p>Your taste, your saves and your account. Coming soon.</p>
+    </section>
     <div class="onboarding" id="onboarding" hidden></div>
     <noscript><p class="nojs">Curi needs JavaScript.</p></noscript>
   </div>

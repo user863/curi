@@ -92,6 +92,8 @@ export const loadCatalog = async (base = 'data/pack') => {
     return inflight.get(c);
   };
 
+  let tagsOnce = null;
+  const searchShards = new Map();
   const shards = new Map();
   const shard = (dir, c) => {
     const key = `${dir}/${c}`;
@@ -107,12 +109,26 @@ export const loadCatalog = async (base = 'data/pack') => {
     loadedClusters: () => loaded.size,
 
     // Fetch the clusters the plan asks for. Returns how many were loaded.
-    ensureClusters: async ({ profile, shares, want, explore = 0, maxNew = 12, rng = Math.random }) => {
-      const wanted = planClusters({ info, profile, shares, categories: manifest.categories, loaded: new Set(loaded.keys()), want, explore, maxNew, rng });
+    ensureClusters: async ({ profile, shares, want, explore = 0, maxNew = 12, rng = Math.random, must = [] }) => {
+      const wanted = planClusters({ info, profile, shares, categories: manifest.categories, loaded: new Set(loaded.keys()), want, explore, maxNew, rng, must });
       if (!wanted.length) return 0;
       await Promise.all(wanted.map(loadIndex));
       rebuild();
       return wanted.length;
+    },
+
+    // One file of the word index, named by its two first letters; {} when no word starts with them.
+    searchShard: (key) => {
+      const hash = manifest.search?.[key];
+      if (!hash) return Promise.resolve({});
+      if (!searchShards.has(key)) searchShards.set(key, get(`${base}/search/${key}.${hash}.json`, 'json'));
+      return searchShards.get(key);
+    },
+
+    // Tag vocabulary and postings (tag -> { cluster: [ids] }), fetched once when the filter is first used.
+    loadTags: () => {
+      tagsOnce ??= manifest.tags ? get(`${base}/${manifest.tags}`, 'json') : Promise.resolve({});
+      return tagsOnce;
     },
 
     // Cards and detail: (id, cluster) pairs. Cluster is on every card as `cl`, and known for loaded works.
