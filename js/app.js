@@ -884,7 +884,7 @@ wrap.addEventListener('click', async (e) => {
     update({ sets: sets.dataset.sets === 'true' });
     return rerenderSheet();
   }
-  const nav = e.target.closest('[data-nav]');
+  const nav = e.target.closest('button[data-nav]'); // the app root carries data-nav too
   if (nav) {
     update({ nav: nav.dataset.nav });
     app.dataset.nav = state.nav;
