@@ -466,5 +466,263 @@
       "length_s": 90,
       "whole_if_under": 240
     }
+  },
+  "texts": {
+    "take": 900,
+    "max_per_group": 60,
+    "books": [
+      {
+        "id": 15877,
+        "kind": "quote",
+        "creator": "Marcus Aurelius",
+        "title": "Meditations",
+        "death": 180,
+        "date": "c. 170",
+        "count": 60,
+        "tags": [
+          "stoicism",
+          "philosophy"
+        ]
+      },
+      {
+        "id": 871,
+        "kind": "quote",
+        "creator": "Epictetus",
+        "title": "The Golden Sayings of Epictetus",
+        "death": 135,
+        "date": "c. 100",
+        "count": 40,
+        "tags": [
+          "stoicism",
+          "philosophy"
+        ]
+      },
+      {
+        "id": 12242,
+        "kind": "poem",
+        "creator": "Emily Dickinson",
+        "title": "Poems",
+        "death": 1886,
+        "date": "",
+        "count": 40,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 1322,
+        "kind": "poem",
+        "creator": "Walt Whitman",
+        "title": "Leaves of Grass",
+        "death": 1892,
+        "date": "",
+        "count": 40,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 1041,
+        "kind": "poem",
+        "creator": "William Shakespeare",
+        "title": "Sonnets",
+        "death": 1616,
+        "date": "1609",
+        "count": 25,
+        "tags": [
+          "verse",
+          "sonnet"
+        ]
+      },
+      {
+        "id": 1934,
+        "kind": "poem",
+        "creator": "William Blake",
+        "title": "Songs of Innocence and of Experience",
+        "death": 1827,
+        "date": "1794",
+        "count": 20,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 5720,
+        "kind": "poem",
+        "creator": "A. E. Housman",
+        "title": "A Shropshire Lad",
+        "death": 1936,
+        "date": "1896",
+        "count": 20,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 7164,
+        "kind": "poem",
+        "creator": "Rabindranath Tagore",
+        "title": "Gitanjali",
+        "death": 1941,
+        "date": "1912",
+        "count": 20,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 1034,
+        "kind": "poem",
+        "creator": "Wilfred Owen",
+        "title": "Poems",
+        "death": 1918,
+        "date": "1920",
+        "count": 15,
+        "tags": [
+          "verse",
+          "war"
+        ]
+      },
+      {
+        "id": 38877,
+        "kind": "poem",
+        "creator": "W. B. Yeats",
+        "title": "Poems",
+        "death": 1939,
+        "date": "",
+        "count": 20,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 19188,
+        "kind": "poem",
+        "creator": "Christina Rossetti",
+        "title": "Poems",
+        "death": 1894,
+        "date": "",
+        "count": 20,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 23684,
+        "kind": "poem",
+        "creator": "John Keats",
+        "title": "Poems",
+        "death": 1821,
+        "date": "1820",
+        "count": 15,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 8774,
+        "kind": "poem",
+        "creator": "William Wordsworth",
+        "title": "Poems in Two Volumes",
+        "death": 1850,
+        "date": "1807",
+        "count": 15,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 109,
+        "kind": "poem",
+        "creator": "Edna St. Vincent Millay",
+        "title": "Renascence, and Other Poems",
+        "death": 1950,
+        "date": "1917",
+        "count": 15,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 50852,
+        "kind": "poem",
+        "creator": "Edgar Allan Poe",
+        "title": "The Bells, and Other Poems",
+        "death": 1849,
+        "date": "",
+        "count": 15,
+        "tags": [
+          "verse"
+        ]
+      },
+      {
+        "id": 4,
+        "kind": "speech",
+        "creator": "Abraham Lincoln",
+        "title": "Gettysburg Address",
+        "death": 1865,
+        "date": "1863",
+        "count": 3,
+        "tags": [
+          "oration",
+          "history"
+        ],
+        "after": "Four score"
+      },
+      {
+        "id": 48364,
+        "kind": "speech",
+        "creator": "Abraham Lincoln",
+        "title": "Noted Speeches of Abraham Lincoln",
+        "death": 1865,
+        "date": "",
+        "count": 25,
+        "tags": [
+          "oration",
+          "history"
+        ],
+        "skip_frac": 0.05
+      },
+      {
+        "id": 31839,
+        "kind": "speech",
+        "creator": "Frederick Douglass",
+        "title": "John Brown: An Address",
+        "death": 1895,
+        "date": "1881",
+        "count": 8,
+        "tags": [
+          "oration",
+          "history"
+        ]
+      },
+      {
+        "id": 30208,
+        "kind": "speech",
+        "creator": "Robert G. Ingersoll",
+        "title": "The Ghosts, and Other Lectures",
+        "death": 1899,
+        "date": "",
+        "count": 15,
+        "tags": [
+          "oration",
+          "history"
+        ]
+      },
+      {
+        "id": 17427,
+        "kind": "speech",
+        "creator": "Woodrow Wilson",
+        "title": "President Wilson's Addresses",
+        "death": 1924,
+        "date": "",
+        "count": 20,
+        "tags": [
+          "oration",
+          "history"
+        ],
+        "skip_frac": 0.03
+      }
+    ]
   }
 }

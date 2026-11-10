@@ -1,4 +1,5 @@
 // HTML builders. Pure: data in, string out.
+import { shape, barsHtml } from './wave.js';
 import { complement, luminance } from './colour.js';
 
 export const esc = (s) =>
@@ -62,8 +63,8 @@ const passageBody = ({ body, verse }) =>
 const cap = (title, line) => `<p class="cap">${title ? `<strong>${esc(title)}</strong>` : ''}<span>${esc(line)}</span></p>`;
 const who = (c) => (c.creator === 'Unknown' ? '' : c.creator);
 
-const playIcon = `<svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
-  <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>`;
+const speakIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z" fill="currentColor"/>
+  <path d="M15.4 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.8 7.8 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 
 export const cardHtml = (card) => {
   const m = card.media;
@@ -73,6 +74,7 @@ export const cardHtml = (card) => {
     return `<section ${attrs} aria-label="${esc(card.creator)}, ${esc(card.title)}">
       <div class="text ${sizeClass(words(card.text.body))}${card.text.verse ? ' verse' : ''}">${passageBody(card.text)}</div>
       ${cap(card.creator, join([card.title, work, card.date]) + ' · Public domain')}
+      <button type="button" class="speak" data-act="speak" aria-label="Read aloud" aria-pressed="false">${speakIcon}</button>
     </section>`;
   }
   const line = join([join([who(card), card.date], ', '), card.source.institution.replace(/, Open Access/, ''), licenseLabel(card.rights)]);
@@ -92,12 +94,10 @@ export const cardHtml = (card) => {
       <div class="listen">
         <p class="kind">${esc(card.editorial.room === 'words' ? 'Read aloud' : 'Recording')} · ${fmtTime(length)}</p>
         <p class="big">${esc(card.title)}</p>
-        <p class="by">${esc(join([who(card), card.date], ', '))}</p>
-        <div class="reader" aria-label="Transcript"></div>
-        <button type="button" class="play" data-act="play" aria-label="Play excerpt" aria-pressed="false">${playIcon}</button>
       </div>
       <audio src="${esc(m.url)}" preload="none" data-fallback="${esc(m.fallback || '')}"></audio>
-      <div class="scrub" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="rail"><i></i></span><b class="when"></b></div>
+      <div class="scrub" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="rail">${barsHtml(shape(card.id))}</span><b class="when"></b></div>
+      <p class="hint">Tap to play</p>
       <p class="failed" hidden>Audio unavailable. <a href="${esc(card.source.url)}" target="_blank" rel="noopener noreferrer">View at the source</a></p>
       ${cap('', line)}
     </section>`;

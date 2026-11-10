@@ -50,7 +50,7 @@ const slow = new Set(); // works that timed out or failed to play this session: 
 let dragging = false; // a card is being swiped: what shows through underneath must not become active
 let judged = false; // the card just left was judged by a swipe
 // Pacing (js/session.js): work entries carry setNo, pos (1..7), plan and outcome. Between sets sits an interlude card.
-let resumed = state.session ?? null; // where the last launch stopped: { setNo, pos, plan }
+let resumed = state.session ? { ...state.session, pos: SET } : null; // the last launch's set counts as finished: a launch starts a new set, never the tail of an old one
 const sitting = { start: Date.now(), firstSet: null }; // a pause of five minutes or more starts a new sitting
 const breaks = new Map(); // setNo -> interlude element
 const passed = new Set(); // setNo of interludes the reader has reached
@@ -132,12 +132,20 @@ const mutedByBrowser = new WeakSet(); // autoplay with sound was refused: playin
 const mediaOf = (el) => el.querySelector('video, audio');
 const bounds = (el) => [Number(el.dataset.start), Number(el.dataset.end)];
 
-const syncPlayButton = (el, on) => el.querySelector('.play')?.setAttribute('aria-pressed', String(on));
+// Progress along the timeline: a thin line on a film, the filled part of the waveform on a recording.
+const paintProgress = (el, f) => {
+  const bar = el.querySelector('.scrub');
+  if (!bar) return;
+  bar.style.setProperty('--p', String(f));
+  const line = bar.querySelector('.rail > i');
+  if (line) line.style.transform = `scaleX(${f})`;
+};
+
+const syncPlayButton = (el, on) => { el.dataset.playing = on ? 'yes' : 'no'; };
 
 // Plays the excerpt window [start, end] of the source file. Video loops it; audio stops at the end.
 const wireMedia = (el, media) => {
   const [start, end] = bounds(el);
-  const fill = el.querySelector('.scrub i');
   const wait = (on) => { el.dataset.wait = on ? 'yes' : 'no'; };
   let retried = false;
   media.addEventListener('error', () => {
@@ -170,7 +178,7 @@ const wireMedia = (el, media) => {
       media.currentTime = start;
       if (media.tagName === 'AUDIO') media.pause();
     }
-    if (fill && !scrubbing) fill.style.transform = `scaleX(${Math.min(1, Math.max(0, (media.currentTime - start) / (end - start)))})`;
+    if (!scrubbing) paintProgress(el, Math.min(1, Math.max(0, (media.currentTime - start) / (end - start))));
   });
   media.addEventListener('ended', () => { media.currentTime = start; });
   media.addEventListener('play', () => syncPlayButton(el, true));
@@ -206,10 +214,24 @@ const syncMedia = (el) => {
 
 // Film and audio on the next cards start buffering at their excerpt, so they begin as soon as the card arrives.
 const PRELOAD_AHEAD = 2;
+const connected = new Set();
+const preconnect = (url) => { // opens the connection to the media host before the card arrives
+  try {
+    const origin = new URL(url, location.href).origin;
+    if (connected.has(origin)) return;
+    connected.add(origin);
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = origin;
+    link.crossOrigin = '';
+    document.head.append(link);
+  } catch { /* not a URL */ }
+};
 const warmNext = () => {
   shown.slice(activeIndex() + 1, activeIndex() + 1 + PRELOAD_AHEAD).forEach((s) => {
     const m = mediaOf(s.el);
     if (!m || m.preload === 'auto') return;
+    preconnect(m.getAttribute('src'));
     m.preload = 'auto';
     if (m.networkState === HTMLMediaElement.NETWORK_EMPTY) m.load(); // starts the fetch; loadedmetadata seeks to the excerpt
   });
@@ -239,14 +261,12 @@ const toggleSound = () => {
 
 /* ---------- captions (iOS app: on-device speech recognition) ---------- */
 
-const wantsCaptions = (card) =>
-  (card.type === 'video' || card.type === 'audio') && !card.editorial.tags.includes('music');
+const wantsCaptions = (card) => card.type === 'video' && !card.editorial.tags.includes('music'); // films only; recordings have no transcript
 
 const wantCaptions = () => {
   if (!Captions.available) return;
   const from = activeIndex();
   const list = shown.slice(from, from + 1 + AHEAD).filter((s) => wantsCaptions(s.card)).slice(0, 2);
-  list.forEach((s) => { if (s.el.dataset.type === 'audio' && !Captions.stateOf(s.card.id)) s.el.dataset.cc = 'pending'; });
   Captions.want(list.map((s) => ({
     id: s.card.id, url: s.card.media.url, fallback: s.card.media.fallback || '', start: s.card.media.start, end: s.card.media.end,
   })), (id) => {
@@ -255,7 +275,7 @@ const wantCaptions = () => {
   });
 };
 
-// Follows the playing media so captions and the reader stay on the spoken line.
+// Follows the playing film so the caption stays on the spoken line.
 const follow = () => {
   const m = active && mediaOf(active);
   if (m && !m.paused) Subtitles.tick(active, m.currentTime);
@@ -389,6 +409,9 @@ const emit = (kind, n = 0, cl = 0, value = 0) => {
   clearTimeout(logTimer);
   logTimer = setTimeout(() => Log.write(localStorage, events), 2000);
 };
+let speech = null; // js/speech.js, loaded after the first card; created on first use
+firstShown.then(() => import('./speech.js')).then((m) => { Speech = m; }).catch((e) => console.error(e));
+let Speech = null;
 firstShown.then(() => import('./log.js')).then((m) => {
   events = events.reduce((all, e) => m.push(all, e), m.read(localStorage));
   Log = m;
@@ -526,6 +549,7 @@ const activate = (el) => {
   if (el === active) return;
   if (fullEl && el !== fullEl) exitFull();
   if (el.dataset.gone) return revive(el);
+  if (speech?.active() && speech.active() !== el) speech.stop();
   finishDwell();
   active = el;
   activeSince = performance.now();
@@ -719,7 +743,7 @@ const endHold = () => {
 };
 feed.addEventListener('pointerdown', (e) => {
   const el = e.target.closest('.card');
-  if (!el || !isMedia(el) || e.target.closest('button, a, .scrub, .reader p') || zoneOf(el, e) !== 'right') return;
+  if (!el || !isMedia(el) || e.target.closest('button, a, .scrub') || zoneOf(el, e) !== 'right') return;
   const m = mediaOf(el);
   if (!m || m.paused) return;
   hold = { el, x: e.clientX, y: e.clientY, fast: false, timer: setTimeout(() => { hold.fast = true; setFast(el, true); }, HOLD_MS) };
@@ -731,14 +755,23 @@ feed.addEventListener('pointermove', (e) => {
 
 // Scrub: drag along the timeline to seek within the excerpt.
 let scrubbing = false;
-const scrubTo = (el, e) => {
+// While dragging, seek to the nearest keyframe (fastSeek) and only when the last seek has landed; the release seeks exactly.
+const seekBusy = new WeakSet();
+const scrubSeek = (m, t, exact) => {
+  if (exact || !m.fastSeek) { m.currentTime = t; return; }
+  if (seekBusy.has(m)) return;
+  seekBusy.add(m);
+  m.addEventListener('seeked', () => seekBusy.delete(m), { once: true });
+  m.fastSeek(t);
+};
+const scrubTo = (el, e, exact = false) => {
   const rail = el.querySelector('.scrub .rail');
   const box = rail.getBoundingClientRect();
   const f = Math.min(1, Math.max(0, el.dataset.full && rotated() ? (e.clientY - box.top) / box.height : (e.clientX - box.left) / box.width));
   const m = mediaOf(el);
   const [start, end] = bounds(el);
-  m.currentTime = Math.min(end - 0.3, start + f * (end - start));
-  el.querySelector('.scrub i').style.transform = `scaleX(${f})`;
+  scrubSeek(m, Math.min(end - 0.3, start + f * (end - start)), exact);
+  paintProgress(el, f);
   el.querySelector('.scrub .when').textContent = `${V.fmtTime(f * (end - start))} / ${V.fmtTime(end - start)}`;
   el.querySelector('.scrub').setAttribute('aria-valuenow', String(Math.round(f * 100)));
 };
@@ -758,6 +791,7 @@ feed.addEventListener('pointermove', (e) => {
 ['pointerup', 'pointercancel'].forEach((type) => feed.addEventListener(type, (e) => {
   const bar = e.target.closest('.scrub');
   if (!scrubbing || !bar) return;
+  if (type === 'pointerup') scrubTo(bar.closest('.card'), e, true);
   scrubbing = false;
   delete bar.dataset.active;
   setUi(true);
@@ -765,6 +799,15 @@ feed.addEventListener('pointermove', (e) => {
 
 // Taps. On film and audio: one plays or pauses (and a pause brings up the controls), two save.
 // On everything else: one reveals the controls, two save.
+// The speaker button: read this passage aloud, or stop. Needs the tap's user gesture, so the module is loaded ahead.
+const toggleSpeak = (el) => {
+  if (!Speech) return;
+  speech ??= Speech.speaker();
+  if (speech.active() === el) return speech.stop();
+  const card = cardOf(el)?.card;
+  if (card?.type === 'passage') speech.start(el, card.text.body, card.text.verse);
+};
+
 const isMedia = (el) => el.dataset.type === 'video' || el.dataset.type === 'audio';
 let lastTap = { t: 0, el: null };
 let tapTimer;
@@ -789,6 +832,15 @@ const onTap = (el, e) => {
     }
     return;
   }
+  if (speech?.active() === el) { // being read aloud: a tap pauses or resumes (a double tap toggles twice and saves)
+    speech.toggle();
+    if (double) {
+      lastTap = { t: 0, el: null };
+      toggleSave(true);
+      ring(el, e);
+    } else lastTap = { t: now, el };
+    return;
+  }
   if (double) {
     clearTimeout(tapTimer);
     lastTap = { t: 0, el: null };
@@ -800,15 +852,6 @@ const onTap = (el, e) => {
   tapTimer = setTimeout(toggleUi, TAP_MS);
 };
 
-// A tap on a transcript line jumps there.
-const seekTo = (el, line) => {
-  const m = mediaOf(el);
-  if (!m) return;
-  m.currentTime = Number(line.dataset.t);
-  m.muted = !sound;
-  if (m.paused) playFrom(el, m).catch(() => {});
-};
-
 feed.addEventListener('click', (e) => {
   const el = e.target.closest('.card');
   if (!el || e.target.closest('a, .scrub')) return;
@@ -817,10 +860,8 @@ feed.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-act]');
   if (btn?.dataset.act === 'more-session') return startOver();
   if (btn?.dataset.act === 'continue') return fillAhead().then(() => scrollToNext(el));
-  if (btn?.dataset.act === 'play') return setUi(!togglePlay(el));
   if (btn?.dataset.act === 'exit-full') return exitFull();
-  const line = e.target.closest('.reader p[data-t]');
-  if (line) return seekTo(el, line);
+  if (btn?.dataset.act === 'speak') return toggleSpeak(el);
   if (!btn) onTap(el, e);
 });
 
@@ -1055,6 +1096,7 @@ document.addEventListener('visibilitychange', () => {
     emit('hide');
     Log?.write(localStorage, events);
     feed.querySelectorAll('video, audio').forEach((m) => m.pause());
+    if (speech?.state() === 'playing') speech.toggle();
   } else if (active) syncMedia(active);
   activeSince = performance.now();
 });

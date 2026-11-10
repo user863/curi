@@ -75,7 +75,7 @@ export const pickFor = ({ kind, index, profile, scores, match, taken, shown, rng
         return () => slot({ explore: 'never' });
     }
   })();
-  return attempt() ?? run({});
+  return attempt() ?? run({}) ?? run({ extra: () => false }); // the rhythm rule gives way last: a film-only filter has nothing else to show
 };
 
 const profileHas = (profile) => profile.cents.length > 0;

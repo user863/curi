@@ -192,36 +192,6 @@ video.art { background: #000; }
   font-size: clamp(28px, 8vw, 36px); font-weight: 500; letter-spacing: -0.025em; line-height: 1.04;
   display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
 }
-.listen .by { font-size: 15px; color: var(--dim); }
-.play {
-  margin-top: 22px; width: 68px; height: 68px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--fg); color: var(--bg);
-}
-.play svg { width: 28px; height: 28px; grid-area: 1 / 1; }
-
-/* Transcript reader: the spoken line stays centred and bright, the rest recedes (vertical swipes still change card) */
-.listen .reader { display: none; }
-.card[data-cc='pending'] .listen, .card[data-cc='yes'] .listen { justify-content: flex-start; gap: 3px; padding-top: 10px; }
-.card[data-cc='pending'] .reader, .card[data-cc='yes'] .reader {
-  display: block; flex: 1; min-height: 0; position: relative; overflow: hidden; margin: 12px -22px 0; padding: 0 22px;
-  -webkit-mask-image: linear-gradient(transparent, #000 16%, #000 80%, transparent);
-  mask-image: linear-gradient(transparent, #000 16%, #000 80%, transparent);
-}
-.card[data-cc='pending'] .big, .card[data-cc='yes'] .big { font-size: 20px; line-height: 1.12; -webkit-line-clamp: 2; }
-.card[data-cc='pending'] .by, .card[data-cc='yes'] .by { font-size: 13px; }
-.card[data-cc='pending'] .play, .card[data-cc='yes'] .play { margin-top: 10px; width: 52px; height: 52px; }
-.card[data-cc='pending'] .play svg, .card[data-cc='yes'] .play svg { width: 22px; height: 22px; }
-.reader > div { padding: 22dvh 0; }
-.reader p {
-  margin: 0 0 0.6em; font-size: clamp(22px, 6.2vw, 27px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.17;
-  opacity: 0.3; transition: opacity 0.3s ease; cursor: pointer;
-}
-.reader p.on { opacity: 1; }
-.reader p.note { opacity: 0.5; font-size: 15px; font-weight: 400; cursor: default; }
-.play .i-pause, .play[aria-pressed='true'] .i-play { display: none; }
-.play[aria-pressed='true'] .i-pause { display: block; }
-
 /* Timeline: a thin line under the picture; drag along it to seek within the excerpt */
 .card[data-type='video'], .card[data-type='audio'] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .scrub {
@@ -236,6 +206,25 @@ video.art { background: #000; }
   opacity: 0; transition: opacity 0.15s; pointer-events: none;
 }
 .scrub[data-active='yes'] .when { opacity: 1; }
+
+/* Recording: the timeline is a waveform with a playhead. No play button: a tap on the card plays and pauses. */
+/* The title sits at the bottom, below the waveform, above the caption; a long one is clipped before it reaches the waveform. */
+.card[data-type='audio'] .listen { inset: calc(38% + 118px) 0 calc(var(--bottom) + 62px); overflow: hidden; justify-content: flex-end; }
+.card[data-type='audio'] .listen .big { -webkit-line-clamp: 3; }
+.card[data-type='audio'] .scrub { bottom: auto; top: 38%; height: 96px; align-items: center; }
+.card[data-type='audio'] .scrub .rail { position: relative; height: 100%; margin: 0; background: none; transition: opacity 0.25s; }
+.scrub .bars { position: absolute; inset: 0; display: flex; align-items: center; gap: 1.5px; }
+.scrub .bars i { flex: 1 1 0; min-width: 1px; max-width: 4px; background: currentColor; border-radius: 1px; transform: none; }
+.scrub .base { color: var(--dim); }
+.scrub .fill { color: var(--fg); clip-path: inset(0 calc(100% - var(--p, 0) * 100%) 0 0); }
+.scrub .head { position: absolute; top: -4px; bottom: -4px; left: calc(var(--p, 0) * 100%); width: 2px; margin-left: -1px; background: var(--accent); border-radius: 1px; }
+.card[data-type='audio']:not([data-playing='yes']) .scrub .rail { opacity: 0.55; }
+.card[data-type='audio'] .scrub[data-active='yes'] .rail { height: 100%; }
+.card[data-type='audio'] .scrub .when { bottom: -26px; }
+.hint { position: absolute; left: 0; right: 0; top: calc(38% + 74px); text-align: center; font-size: 13px; color: var(--dim); transition: opacity 0.25s; pointer-events: none; }
+.card[data-type='audio'][data-playing='yes'] .hint { opacity: 0; }
+.card[data-type='audio'][data-wait='yes'] .scrub .head { animation: blink 0.9s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
 
 /* Swipe: the card follows the finger and flies off; the next one waits underneath */
 .card[data-swiping] { transform-origin: 50% 130%; box-shadow: 0 0 40px rgba(0, 0, 0, 0.3); will-change: transform; }
@@ -310,7 +299,6 @@ video.art { background: #000; }
   animation: sweep 1.1s ease-in-out infinite; opacity: 0.55; pointer-events: none;
 }
 @keyframes sweep { from { background-position: -40% 0; } to { background-position: 140% 0; } }
-.card[data-wait='yes'] .play { opacity: 0.7; }
 .failed[data-code]:not([data-code=''])::after { content: ' (error ' attr(data-code) ')'; }
 
 /* Passage card */
@@ -328,6 +316,24 @@ video.art { background: #000; }
 .text.md { font-size: clamp(21px, 5.9vw, 25px); }
 .text.sm { font-size: clamp(15.5px, 4.2vw, 17.5px); line-height: 1.36; letter-spacing: -0.004em; }
 .text.verse { line-height: 1.3; }
+
+/* Read aloud: a small speaker beside the caption; its waves pulse while it speaks. A tap on the card pauses. */
+.card { --accent: var(--sky); }
+.card[data-tone='sun'] { --accent: var(--black); }
+.card[data-tone='ink'], .card[data-tone='sky'] { --accent: var(--sun); }
+.card[data-type='passage'] .cap { padding-right: 64px; }
+.speak {
+  position: absolute; right: 12px; bottom: calc(var(--bottom) + 6px); width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; color: var(--dim); transition: opacity 0.2s, color 0.2s;
+}
+.speak svg { width: 20px; height: 20px; }
+.speak[aria-pressed='true'] { color: var(--fg); }
+.app.ui .speak { opacity: 0; pointer-events: none; }
+@keyframes speaking { 50% { opacity: 0.35; } }
+.speak[aria-pressed='true'] svg path:last-child { animation: speaking 1.1s ease-in-out infinite; }
+.card[data-speech='paused'] .speak { color: var(--dim); }
+.card[data-speech='paused'] .speak svg path:last-child { animation: none; opacity: 0.35; }
+
 .text.verse p + p { margin-top: 0.4em; }
 .break .text > p { max-width: 30em; }
 .break .small { font-size: 12px; letter-spacing: 0; }

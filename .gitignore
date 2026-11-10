@@ -10,3 +10,4 @@ ios/build/
 ios/build-sim/
 ios/Commonplace.xcodeproj/
 ios/**/xcuserdata/
+experiments/

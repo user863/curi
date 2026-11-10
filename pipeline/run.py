@@ -3,7 +3,7 @@ Usage (from the project root): python3 -m pipeline.run [--only met,gutenberg,pre
 import argparse, collections, json
 from pathlib import Path
 from . import db, embed, export, quality, secrets, state
-from .sources import archive, cleveland, europeana, europeana_galleries, gutenberg, met, openverse
+from .sources import archive, cleveland, europeana, europeana_galleries, gutenberg, met, openverse, texts
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -41,7 +41,8 @@ def main():
     overrides = json.loads((Path(__file__).parent / "overrides.json").read_text())["cards"]
     jobs = [("met", lambda s: met.run(cfg["met"], s), cfg["met"]),
             ("cleveland", lambda s: cleveland.run(cfg["cleveland"], s), cfg["cleveland"]),
-            ("gutenberg", lambda s: gutenberg.run(cfg["gutenberg"], s), cfg["gutenberg"])]
+            ("gutenberg", lambda s: gutenberg.run(cfg["gutenberg"], s), cfg["gutenberg"]),
+            ("texts", lambda s: texts.run(cfg["texts"], s), cfg["texts"])]
     jobs += [(a["name"], (lambda a: lambda s: archive.run(a, s))(a), a) for a in cfg["archive"]]
     jobs += [(e["name"], (lambda e: lambda s: europeana.run(e, s))(e), e) for e in cfg["europeana"]]
     jobs += [("europeana-galleries", lambda s: europeana_galleries.run(cfg["europeana_galleries"], s), cfg["europeana_galleries"])]
