@@ -4,7 +4,8 @@
 // The feed loop below mirrors js/app.js (two cards ranked ahead, re-ranked after a verdict); keep them in step.
 import { writeFile } from 'node:fs/promises';
 import { loadCatalog } from '../js/catalog.js';
-import { emptyProfile, learn, scoreAll, pickNext, shares } from '../js/rank.js';
+import { emptyProfile, learn, scoreAll, matchAll, shares } from '../js/rank.js';
+import { SET, planFor, nextSlot, pickFor } from '../js/session.js';
 import { loadWorld, mulberry, mixSeed, ERAS } from './pack.mjs';
 import { summarise, table } from './metrics.mjs';
 
@@ -103,40 +104,52 @@ const runReader = async (world, ramp, seed, cards) => {
   const seen = new Set();
   const queued = new Set();
   let profile = emptyProfile();
-  let feed = []; // work ids in feed order: shown so far, then the cards ranked ahead
+  let entries = []; // { n, setNo, pos, plan, outcome } in feed order: shown so far, then the cards ranked ahead
   let at = 0;
-  let scored = { key: '', scores: null };
+  const released = new Set(); // sets whose interlude has been passed
+  let scored = { key: '', scores: null, match: null };
 
   const mix = () => shares(profile, ids);
+  const keyNow = () => `${profile.ver}:${catalog.version}`;
   const scoresNow = () => {
-    const key = `${profile.ver}:${catalog.version}`;
-    if (scored.key !== key) scored = { key, scores: scoreAll(catalog, profile) };
+    if (scored.key !== keyNow()) scored = { key: keyNow(), scores: scoreAll(catalog, profile), match: null };
     return scored.scores;
   };
+  const matchNow = () => {
+    scoresNow();
+    scored.match ??= matchAll(catalog, profile);
+    return scored.match;
+  };
   const grow = (opts = {}) => catalog.ensureClusters({ profile, shares: mix(), want: WANT, explore: EXPLORE_CLUSTERS, rng, ...opts });
-  const rank = () => pickNext({
-    index: catalog, profile, scores: scoresNow(), shown: feed, rng,
+  const rank = (kind) => pickFor({
+    kind, index: catalog, profile, scores: scoresNow(), match: matchNow, shown: entries.map((e) => e.n), rng,
     taken: (id) => seen.has(id) || queued.has(id) || catalog.isBlocked(id),
-    only: feed.length === 0 ? ['visual'] : null,
+    only: entries.length === 0 ? ['visual'] : null,
   });
+  const waiting = () => entries.length > 0 && entries[entries.length - 1].pos === SET && !released.has(entries[entries.length - 1].setNo);
   const appendNext = async () => {
-    let pick = rank();
-    if (!pick && (await catalog.ensureClusters({ profile, shares: mix(), want: Infinity, maxNew: 4, rng }))) pick = rank();
+    const slot = nextSlot(entries[entries.length - 1]);
+    const plan = slot.start
+      ? planFor({ sittingSet: slot.setNo, previous: entries.filter((e) => e.setNo === slot.setNo - 1).map((e) => e.outcome) })
+      : entries[entries.length - 1].plan;
+    const kind = plan[slot.pos - 1];
+    let pick = rank(kind);
+    if (!pick && (await catalog.ensureClusters({ profile, shares: mix(), want: Infinity, maxNew: 4, rng }))) pick = rank(kind);
     if (!pick && seen.size) {
       seen.clear();
-      pick = rank();
+      pick = rank(kind);
     }
     if (!pick) return false;
-    feed = [...feed, pick.id];
+    entries = [...entries, { n: pick.id, setNo: slot.setNo, pos: slot.pos, plan, outcome: null }];
     queued.add(pick.id);
     return true;
   };
   const fillAhead = async () => {
-    while (feed.length - 1 - at < AHEAD && (await appendNext()));
+    while (!waiting() && entries.length - 1 - at < AHEAD && (await appendNext()));
   };
   const refillAhead = async () => {
-    feed.slice(at + 1).forEach((id) => queued.delete(id));
-    feed = feed.slice(0, at + 1);
+    entries.slice(at + 1).forEach((e) => queued.delete(e.n));
+    entries = entries.slice(0, at + 1);
     await fillAhead();
   };
 
@@ -147,8 +160,8 @@ const runReader = async (world, ramp, seed, cards) => {
 
   const run = { pos: [], u: [], save: [], skip: [] };
   let swiped = false; // the last card was judged by a swipe: the queue is re-ranked once the next card is up
-  for (at = 0; at < cards && at < feed.length; at++) {
-    const id = feed[at];
+  for (at = 0; at < cards && at < entries.length; at++) {
+    const id = entries[at].n;
     seen.add(id);
     await (swiped ? refillAhead() : fillAhead());
     const p = world.index.posOf(id);
@@ -173,6 +186,11 @@ const runReader = async (world, ramp, seed, cards) => {
     run.u.push(did.u);
     run.save.push(did.save);
     run.skip.push(did.seconds < SKIP_S);
+    entries[at].outcome = did.seconds < SKIP_S ? 'skip' : 'engaged';
+    if (entries[at].pos === SET) { // past the interlude: the next set is composed
+      released.add(entries[at].setNo);
+      await fillAhead();
+    }
   }
   return { ...run, ...bounds(world, ramp, reader, cards), target: mix(), bytes: catalog.stats.bytes };
 };

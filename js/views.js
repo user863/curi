@@ -126,6 +126,21 @@ export const endCardHtml = (count, savedCount) => `
     <div class="meta"><button type="button" class="btn" data-act="more-session">Start over</button></div>
   </section>`;
 
+// The pause between two sets: a quiet card, filled in when it is reached (see app.js fillInterlude).
+export const interludeHtml = () => `
+  <section class="card break" data-id="break" data-type="break" data-tone="paper" aria-label="Pause between sets">
+    <div class="text md"></div>
+  </section>`;
+
+// tiles: [{ pic, glyph, tone, saved }] for the set just seen. minutes: shown in small type in long sittings.
+export const interludeBodyHtml = ({ tiles, saved, minutes }) => `
+  <p>That was a set of ${tiles.length}.</p>
+  <div class="tiles" aria-hidden="true">${tiles.map((t) => `<span class="tile" data-tone="${esc(t.tone)}" data-saved="${t.saved ? 'yes' : 'no'}">${
+    t.pic ? `<img src="${esc(t.pic)}" alt="" referrerpolicy="no-referrer" decoding="async" draggable="false">` : esc(t.glyph)}</span>`).join('')}</div>
+  <p class="dim">${saved ? `${saved} saved from it.` : 'Swipe on when you like.'}</p>
+  ${minutes ? `<p class="dim small">${minutes} min so far</p>` : ''}
+  <p><button type="button" class="btn" data-act="continue">Keep going</button></p>`;
+
 const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>` : '');
 
 const linkLabel = { image: 'View at the source', video: 'Watch the full film', audio: 'Open the full recording', passage: 'Read the full text' };

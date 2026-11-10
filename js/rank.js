@@ -126,25 +126,34 @@ export const shares = (profile, categoryIds) => {
   return Object.fromEntries(categoryIds.map((id, k) => [id, floored[k] / total]));
 };
 
-// Interest x quality for every work. Flat typed arrays keep this fast at 100k+ works.
-export const scoreAll = (index, profile) => {
-  const { n, dim, emb, quality } = index;
+// Cosine of every work to its closest positive interest (0 with no interests). Flat typed arrays keep this fast at 100k+ works.
+export const matchAll = (index, profile) => {
+  const { n, dim, emb } = index;
   const out = new Float32Array(n);
-  const flat = (list) => Float32Array.from(list.flatMap((c) => c.v));
-  const pos = flat(profile.cents);
-  const neg = flat(profile.negs);
-  const kp = profile.cents.length;
-  const kn = profile.negs.length;
-  const best = (cs, k, base) => {
+  const k = profile.cents.length;
+  if (!k) return out;
+  const pos = Float32Array.from(profile.cents.flatMap((c) => c.v));
+  for (let i = 0; i < n; i++) {
+    const base = i * dim;
     let m = -1;
     for (let c = 0; c < k; c++) {
       let s = 0;
       const o = c * dim;
-      for (let d = 0; d < dim; d++) s += cs[o + d] * emb[base + d];
+      for (let d = 0; d < dim; d++) s += pos[o + d] * emb[base + d];
       if (s > m) m = s;
     }
-    return m / 127;
-  };
+    out[i] = m / 127;
+  }
+  return out;
+};
+
+// Interest x quality for every work.
+export const scoreAll = (index, profile) => {
+  const { n, dim, emb, quality } = index;
+  const out = new Float32Array(n);
+  const neg = Float32Array.from(profile.negs.flatMap((c) => c.v));
+  const kn = profile.negs.length;
+  const match = matchAll(index, profile);
   const weights = profile.negs.map((c) => (c.soft ? (c.n / SOFT_CONFIRM) ** 2 : 1)); // a few skips are a hint, not a verdict
   const dislike = (base) => {
     let worst = 0;
@@ -157,9 +166,7 @@ export const scoreAll = (index, profile) => {
     return worst;
   };
   for (let i = 0; i < n; i++) {
-    const base = i * dim;
-    const p = kp ? best(pos, kp, base) : 0;
-    const interest = sigmoid(5 * (p - 0.25 - 0.6 * (kn ? dislike(base) : 0)));
+    const interest = sigmoid(5 * (match[i] - 0.25 - 0.6 * (kn ? dislike(i * dim) : 0)));
     out[i] = interest * (1 + quality[i] / 250);
   }
   return out;
@@ -187,11 +194,11 @@ const topInCategory = (index, scores, catCode, taken, m, skip) => {
 };
 
 // Random-but-excellent: a high-quality work from a random sample, outside the top list.
-const explore = (index, catCode, taken, rng, exclude, skip) => {
+const explore = (index, catCode, taken, rng, exclude, skip, minQuality) => {
   let pick = null;
   for (let t = 0; t < EXPLORE_SAMPLE; t++) {
     const i = Math.floor(rng() * index.n);
-    if (index.cat[i] !== catCode || exclude.has(i) || skip(i) || taken(index.ids[i]) || index.quality[i] < EXPLORE_MIN_QUALITY) continue;
+    if (index.cat[i] !== catCode || exclude.has(i) || skip(i) || taken(index.ids[i]) || index.quality[i] < minQuality) continue;
     if (!pick || index.quality[i] > index.quality[pick]) pick = i;
   }
   return pick;
@@ -209,7 +216,10 @@ const repeats = (index, shown) => {
 
 // Next work: choose the category furthest below its share in the recent window, then the best work in it.
 // In a category with nothing left under both caps, the creator cap goes first, then the source cap, before another category is tried.
-export const pickNext = ({ index, profile, scores, taken, shown, rng, only = null }) => { // only: category ids to draw from, or null
+// only: category ids to draw from, or null. A pacing slot (js/session.js) can set explore ('never' | 'maybe' | 'always'),
+// a minimum quality for explore picks, and an extra rule for rows to leave out; relax: false returns null
+// instead of breaking the repeat caps.
+export const pickNext = ({ index, profile, scores, taken, shown, rng, only = null, explore: mode = 'maybe', exploreMin = EXPLORE_MIN_QUALITY, extra = () => false, relax = true }) => {
   const ids = index.categories.map((c) => c.id);
   const share = shares(profile, ids);
   const recent = shown.slice(-WINDOW).map((id) => index.cat[index.posOf(id)]);
@@ -220,10 +230,10 @@ export const pickNext = ({ index, profile, scores, taken, shown, rng, only = nul
   const attempt = (levels) => {
     for (const [k] of only ? deficit.filter(([k]) => only.includes(ids[k])) : deficit) {
       for (const skip of levels) {
-        const list = topInCategory(index, scores, k, taken, TOP_M, skip);
+        const list = topInCategory(index, scores, k, taken, TOP_M, (i) => skip(i) || extra(i));
         if (!list.length) continue;
-        if (shown.length >= 2 && rng() < EXPLORE_RATE) {
-          const i = explore(index, k, taken, rng, new Set(list.map(([p]) => p)), skip);
+        if (mode === 'always' || (mode === 'maybe' && shown.length >= 2 && rng() < EXPLORE_RATE)) {
+          const i = explore(index, k, taken, rng, new Set(list.map(([p]) => p)), (r) => skip(r) || extra(r), exploreMin);
           if (i !== null) return { pos: i, id: index.ids[i], category: ids[k], share: share[ids[k]], exploring: true };
         }
         const value = ([i, s]) => s + rng() * JITTER - MMR_LAMBDA * (last.length ? Math.max(...last.map((j) => rowCos(index.emb, index.dim, i, j))) : 0);
@@ -233,7 +243,7 @@ export const pickNext = ({ index, profile, scores, taken, shown, rng, only = nul
     }
     return null;
   };
-  return attempt([(i) => cap.source(i) || cap.creator(i), cap.source]) ?? attempt([() => false]);
+  return attempt([(i) => cap.source(i) || cap.creator(i), cap.source]) ?? (relax ? attempt([() => false]) : null);
 };
 
 // Why this card: the closest interest, named by the label it shares with the card.

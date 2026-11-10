@@ -1,0 +1,40 @@
+{
+ "label": "stage 2: sets of seven",
+ "rev": 45,
+ "works": 58889,
+ "readers": 1000,
+ "cards": 100,
+ "seed": 1,
+ "metrics": {
+  "firstSave": 11,
+  "noSave": 0.033,
+  "regret": 0.3980871357036763,
+  "utilityOracle": 0.880361516062022,
+  "utilityRandom": 0.4457735895882236,
+  "variety": 0.8855631953365203,
+  "varietyCatalogue": 0.6925453130195636,
+  "sourcePer10": 1.9984505494505493,
+  "sourceOver": 0.0003076923076923077,
+  "creatorPer20": 1.00020987654321,
+  "creatorOver": 0.00020987654320987656,
+  "coverage": 0.835820895522388,
+  "exposureGini": 0.899141046069803,
+  "overlap50": 0.05593786497741948,
+  "categoryGap": 12.583398539206232,
+  "categories": {
+   "visual": 0.37562,
+   "text": 0.17762,
+   "video": 0.22855,
+   "audio": 0.21821
+  },
+  "modern": 0.52147,
+  "undated": 0.21812,
+  "modernCatalogue": 0.417718079777208,
+  "undatedCatalogue": 0.49362359693660957,
+  "starterQuality": null,
+  "saveRate": 0.10496999999999983,
+  "skipRate": 0.24123999999999995,
+  "utility": 0.4822743803583448,
+  "indexKB": 809.8685078125
+ }
+}

@@ -1,6 +1,7 @@
 import { loadCatalog } from './catalog.js';
 import { load, save as persist, hasBit, withBit } from './store.js';
-import { pickNext, scoreAll, shares, learn, withRoom, forgetInterest, emptyProfile, explain, age } from './rank.js';
+import { scoreAll, matchAll, shares, learn, withRoom, forgetInterest, emptyProfile, explain, age } from './rank.js';
+import { SET, planFor, nextSlot, pickFor } from './session.js';
 import * as V from './views.js';
 import * as Captions from './captions.js';
 import * as Subtitles from './subtitles.js';
@@ -48,6 +49,16 @@ let currentSheet = null; // () => html (or Promise), re-rendered after edits
 const slow = new Set(); // works that timed out or failed to play this session: skipped, but not remembered
 let dragging = false; // a card is being swiped: what shows through underneath must not become active
 let judged = false; // the card just left was judged by a swipe
+// Pacing (js/session.js): work entries carry setNo, pos (1..7), plan and outcome. Between sets sits an interlude card.
+let resumed = state.session ?? null; // where the last launch stopped: { setNo, pos, plan }
+const sitting = { start: Date.now(), firstSet: null }; // a pause of five minutes or more starts a new sitting
+const breaks = new Map(); // setNo -> interlude element
+const passed = new Set(); // setNo of interludes the reader has reached
+const lastEntry = () => [...shown].reverse().find((s) => s.setNo !== undefined) ?? resumed;
+const waiting = () => { // the set is complete and its interlude not reached yet (a resumed set is not waiting)
+  const last = [...shown].reverse().find((s) => s.setNo !== undefined);
+  return Boolean(last) && last.pos === SET && !passed.has(last.setNo);
+};
 let epoch = 0; // bumped when feedback invalidates cards that were ranked but not yet shown
 
 const update = (patch) => {
@@ -59,11 +70,16 @@ const filtering = () => state.filter.types.length > 0 || state.filter.tags.lengt
 const categoryIds = () => catalog.categories.map((c) => c.id);
 
 // Scores depend only on the interests, so they are recomputed only when those change.
-let scoreCache = { key: '', scores: null };
+let scoreCache = { key: '', scores: null, match: null };
 const scoresNow = () => {
   const key = `${state.profile.ver}:${catalog.version}`; // interests changed, or more works loaded
-  if (scoreCache.key !== key) scoreCache = { key, scores: scoreAll(catalog, state.profile) };
+  if (scoreCache.key !== key) scoreCache = { key, scores: scoreAll(catalog, state.profile), match: null };
   return scoreCache.scores;
+};
+const matchNow = () => {
+  scoresNow();
+  scoreCache.match ??= matchAll(catalog, state.profile);
+  return scoreCache.match;
 };
 
 // Tag filter: the works that carry a chosen tag, and the clusters holding them (null / [] when no tag is chosen).
@@ -86,10 +102,12 @@ const onlyTypes = () => {
   return types.length ? types : null;
 };
 
-const rank = () => pickNext({
+const rank = (kind) => pickFor({
+  kind,
   index: catalog,
   profile: state.profile,
   scores: scoresNow(),
+  match: matchNow,
   taken: (id) => hasBit(state.seen, id) || catalog.isBlocked(id) || shownIds.has(id) || hasBit(state.bad, id) || slow.has(id) || (allowedIds !== null && !allowedIds.has(id)),
   shown: shown.map((s) => s.n),
   rng: Math.random,
@@ -328,6 +346,7 @@ const paint = (el, card) => {
 
 // A card below the current one that turned out unplayable is removed before anyone sees it.
 const dropAhead = (entry) => {
+  if (entry.pos === SET) dropInterlude(entry.setNo);
   shownIds.add(entry.n);
   shown = shown.filter((s) => s !== entry);
   unmount(entry.el);
@@ -377,11 +396,19 @@ firstShown.then(() => import('./log.js')).then((m) => {
 
 const appendNext = async () => {
   const stamp = epoch;
-  let pick = rank();
-  if (!pick && (await catalog.ensureClusters({ profile: state.profile, shares: mix(), want: Infinity, maxNew: 4, must: tagClusters }))) pick = rank();
+  if (waiting()) return 'wait';
+  const slot = nextSlot(lastEntry());
+  if (slot.start) sitting.firstSet ??= slot.setNo;
+  const sittingSet = slot.setNo - (sitting.firstSet ?? slot.setNo);
+  const plan = slot.start
+    ? planFor({ sittingSet, previous: shown.filter((s) => s.setNo === slot.setNo - 1).map((s) => s.outcome) })
+    : lastEntry().plan;
+  const kind = plan[slot.pos - 1];
+  let pick = rank(kind);
+  if (!pick && (await catalog.ensureClusters({ profile: state.profile, shares: mix(), want: Infinity, maxNew: 4, must: tagClusters }))) pick = rank(kind);
   if (!pick && state.seen.length && !filtering()) {
     update({ seen: new Uint8Array(0) }); // every work seen once: start a new pass
-    pick = rank();
+    pick = rank(kind);
   }
   if (!pick) {
     appendEnd();
@@ -401,23 +428,54 @@ const appendNext = async () => {
   const reason = { ...explain(state.profile, card, catalog.vecOf(pick.id), pick.exploring), category: pick.category, share: pick.share };
   const el = mount(V.cardHtml(card));
   paint(el, card);
-  shown = [...shown, { card, n: pick.id, reason, el }];
+  const entry = { card, n: pick.id, reason, el, setNo: slot.setNo, pos: slot.pos, plan, sittingSet, outcome: null };
+  shown = [...shown, entry];
   shownIds.add(pick.id);
+  if (slot.pos === SET) appendInterlude(entry);
   warmNext();
   firstCard();
   return 'yes';
 };
 
+const appendInterlude = (entry) => {
+  breaks.get(entry.setNo)?.remove();
+  breaks.set(entry.setNo, mount(V.interludeHtml()));
+};
+
+// Filled when reached, so it shows what the set held and what was saved from it by then.
+const fillInterlude = (el, setNo) => {
+  const set = shown.filter((s) => s.setNo === setNo);
+  const tiles = set.map(({ card, n }) => ({
+    pic: card.type === 'image' ? card.media.url : card.media?.poster ?? null,
+    glyph: card.type === 'passage' ? '“' : card.type === 'audio' ? '♪' : '▶',
+    tone: card.editorial.tone,
+    saved: state.saved.includes(n),
+  }));
+  const calm = set[set.length - 1]?.sittingSet >= 3;
+  el.querySelector('.text').innerHTML = V.interludeBodyHtml({ tiles, saved: tiles.filter((t) => t.saved).length, minutes: calm ? Math.max(1, Math.round((Date.now() - sitting.start) / 60000)) : 0 });
+};
+
+const dropInterlude = (setNo) => {
+  breaks.get(setNo)?.remove();
+  breaks.delete(setNo);
+};
+
+const setOfBreak = (el) => [...breaks].find(([, b]) => b === el)?.[0];
+
 const activeIndex = () => {
   const i = shown.findIndex((s) => s.el === active);
-  return i >= 0 ? i : active ? shown.length - 1 : 0; // on the end card: after the last
+  if (i >= 0) return i;
+  const setNo = setOfBreak(active);
+  if (setNo !== undefined) return shown.findIndex((s) => s.setNo === setNo && s.pos === SET); // an interlude sits after its set
+  return active ? shown.length - 1 : 0; // on the end card: after the last
 };
 
 let chain = Promise.resolve();
 const fillAhead = () => {
   chain = chain.then(async () => {
     while (!endEl && shown.length - 1 - activeIndex() < AHEAD) {
-      if ((await appendNext()) === 'no') break;
+      const got = await appendNext();
+      if (got === 'no' || got === 'wait') break;
     }
   }).catch((e) => console.error(e));
   return chain;
@@ -430,6 +488,7 @@ const refillAhead = () => {
   const idx = activeIndex();
   shown.slice(idx + 1).forEach((s) => { unmount(s.el); shownIds.delete(s.n); });
   shown = shown.slice(0, idx + 1);
+  [...breaks.keys()].forEach((setNo) => { if (!shown.some((s) => s.setNo === setNo && s.pos === SET)) dropInterlude(setNo); });
   if (endEl) { unmount(endEl); endEl = null; }
   return fillAhead();
 };
@@ -457,6 +516,7 @@ const finishDwell = () => {
   const length = m ? m.end - m.start : 0;
   const kind = judged ? 'left' : seconds < SKIP_S ? 'skip' : length > 0 && seconds >= FINISH_SHARE * length ? 'finish' : 'dwell';
   judged = false;
+  entry.outcome = kind;
   emit(kind, entry.n, entry.card.cl, Math.round(seconds * 10) / 10);
   if (kind === 'skip' || kind === 'finish') update({ profile: learn(state.profile, entry.card, kind, catalog.vecOf(entry.n)) });
   else if (kind === 'dwell' && seconds >= DWELL_MIN_S) update({ profile: learn(state.profile, entry.card, 'dwell', null, seconds) });
@@ -474,6 +534,13 @@ const activate = (el) => {
   intro = false;
   const entry = cardOf(el);
   if (entry) emit('show', entry.n, entry.card.cl, entry.reason.kind === 'exploring' ? 1 : 0);
+  if (entry?.setNo !== undefined) update({ session: { setNo: entry.setNo, pos: entry.pos, plan: entry.plan } });
+  if (el.dataset.type === 'break') { // the reader has reached the pause: the next set is composed from here
+    const setNo = setOfBreak(el);
+    passed.add(setNo);
+    fillInterlude(el, setNo);
+    emit('pause', 0, 0, setNo);
+  }
   if (entry && !hasBit(state.seen, entry.n)) update({ seen: withBit(state.seen, entry.n) });
   syncTools();
   fillAhead();
@@ -545,7 +612,10 @@ const startOver = async () => {
   shown = [];
   shownIds.clear();
   active = null;
-  update({ seen: new Uint8Array(0) });
+  update({ seen: new Uint8Array(0), session: null });
+  resumed = null;
+  [...breaks.keys()].forEach(dropInterlude);
+  passed.clear();
   if (endEl) unmount(endEl);
   endEl = null;
   await fillAhead();
@@ -699,7 +769,7 @@ const isMedia = (el) => el.dataset.type === 'video' || el.dataset.type === 'audi
 let lastTap = { t: 0, el: null };
 let tapTimer;
 const onTap = (el, e) => {
-  if (el.dataset.type === 'end') return;
+  if (el.dataset.type === 'end' || el.dataset.type === 'break') return;
   const now = performance.now();
   const double = lastTap.el === el && now - lastTap.t < TAP_MS;
   if (isMedia(el)) {
@@ -746,6 +816,7 @@ feed.addEventListener('click', (e) => {
   if (e.target.closest('.cap')) return openInfo(el);
   const btn = e.target.closest('button[data-act]');
   if (btn?.dataset.act === 'more-session') return startOver();
+  if (btn?.dataset.act === 'continue') return fillAhead().then(() => scrollToNext(el));
   if (btn?.dataset.act === 'play') return setUi(!togglePlay(el));
   if (btn?.dataset.act === 'exit-full') return exitFull();
   const line = e.target.closest('.reader p[data-t]');
@@ -794,7 +865,7 @@ const flyAway = ({ el, next, tag }, dir) => {
 };
 feed.addEventListener('pointerdown', (e) => {
   const el = e.target.closest('.card');
-  swipe = el && el === active && !dragging && !fullEl && el.dataset.type !== 'end' && !el.dataset.set && !e.target.closest('button, a, .scrub, .strip')
+  swipe = el && el === active && !dragging && !fullEl && el.dataset.type !== 'end' && el.dataset.type !== 'break' && !el.dataset.set && !e.target.closest('button, a, .scrub, .strip')
     ? { el, x: e.clientX, y: e.clientY, live: false, tag: null, next: null }
     : null;
 });
@@ -975,8 +1046,11 @@ document.addEventListener('keydown', (e) => {
   else if (KEYS[e.key]) act(KEYS[e.key]);
 });
 
+let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && hiddenAt && Date.now() - hiddenAt > 300000) Object.assign(sitting, { start: Date.now(), firstSet: null }); // a new sitting
   if (document.hidden) {
+    hiddenAt = Date.now();
     finishDwell();
     emit('hide');
     Log?.write(localStorage, events);

@@ -20,8 +20,9 @@ const toBase64 = (bits) => {
 };
 const fromBase64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
+// session: where pacing stopped, { setNo, pos, plan }, so a set resumes.
 // onboarded: 'yes' | 'no' (skipped) | 'unknown' (not asked yet)
-export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), bad: new Uint8Array(0), onboarded: 'unknown', filter: { types: [], tags: [] }, colour: 'palette', sets: false, nav: 'icons' });
+export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), bad: new Uint8Array(0), onboarded: 'unknown', filter: { types: [], tags: [] }, colour: 'palette', sets: false, nav: 'icons', session: null });
 
 export const load = () => {
   try {
