@@ -1,0 +1,40 @@
+{
+ "label": "stage 0: before any ranking change",
+ "rev": 44,
+ "works": 58889,
+ "readers": 1000,
+ "cards": 100,
+ "seed": 1,
+ "metrics": {
+  "firstSave": 11,
+  "noSave": 0.034,
+  "regret": 0.3718725362658033,
+  "utilityOracle": 0.880361516062022,
+  "utilityRandom": 0.4457735895882236,
+  "variety": 0.7699483182267982,
+  "varietyCatalogue": 0.6925453130195636,
+  "sourcePer10": 6.6702637362637365,
+  "sourceOver": 0.9977362637362638,
+  "creatorPer20": 2.0436172839506175,
+  "creatorOver": 0.7500370370370371,
+  "coverage": 0.8955223880597015,
+  "exposureGini": 0.9257414757413143,
+  "overlap50": 0.10623700710487148,
+  "categoryGap": 7.592541992001454,
+  "categories": {
+   "visual": 0.23476,
+   "text": 0.26428,
+   "video": 0.22583,
+   "audio": 0.27513
+  },
+  "modern": 0.67955,
+  "undated": 0.08707,
+  "modernCatalogue": 0.417718079777208,
+  "undatedCatalogue": 0.49362359693660957,
+  "starterQuality": null,
+  "saveRate": 0.11515000000000017,
+  "skipRate": 0.2173599999999996,
+  "utility": 0.5084889797962183,
+  "indexKB": 925.13166796875
+ }
+}

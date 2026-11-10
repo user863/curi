@@ -187,7 +187,10 @@ export const interestsSheetHtml = (profile, rooms, mix, categories, colour, sets
     <p class="line dim">Your mix</p>
     <p class="chips">${categories.map((c) => `<span>${esc(c.label)} ${Math.round(mix[c.id] * 100)}%</span>`).join('')}</p>
     ${list('cents', 'More of')}${list('negs', 'Less of')}
-    <p><button type="button" class="btn ghost" data-act="reset">Reset interests</button></p>`;
+    <div class="actions">
+      <button type="button" class="btn ghost" data-act="reset">Reset interests</button>
+      <button type="button" class="btn ghost" data-act="open-log">Activity log</button>
+    </div>`;
 };
 
 export const onboardingHtml = (rooms, samples) => {

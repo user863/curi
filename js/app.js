@@ -358,6 +358,23 @@ const preloadImage = (url) => new Promise((resolve) => {
 let firstCard;
 const firstShown = new Promise((resolve) => { firstCard = resolve; });
 
+// Local event log (js/log.js): what was shown and what the reader did, kept on this device only.
+// The module loads after the first card; until then `events` holds this launch's events.
+let Log = null;
+let events = [];
+let logTimer;
+const emit = (kind, n = 0, cl = 0, value = 0) => {
+  const e = [Math.round(Date.now() / 1000), kind, n, cl, value];
+  events = Log ? Log.push(events, e) : [...events, e];
+  if (!Log) return;
+  clearTimeout(logTimer);
+  logTimer = setTimeout(() => Log.write(localStorage, events), 2000);
+};
+firstShown.then(() => import('./log.js')).then((m) => {
+  events = events.reduce((all, e) => m.push(all, e), m.read(localStorage));
+  Log = m;
+}).catch((e) => console.error(e));
+
 const appendNext = async () => {
   const stamp = epoch;
   let pick = rank();
@@ -435,13 +452,14 @@ const syncSaved = () => {
 const finishDwell = () => {
   const entry = cardOf(active);
   if (!entry) return;
-  if (judged) { judged = false; return; }
   const seconds = (performance.now() - activeSince) / 1000;
   const m = entry.card.media;
   const length = m ? m.end - m.start : 0;
-  if (seconds < SKIP_S) update({ profile: learn(state.profile, entry.card, 'skip', catalog.vecOf(entry.n)) });
-  else if (length > 0 && seconds >= FINISH_SHARE * length) update({ profile: learn(state.profile, entry.card, 'finish', catalog.vecOf(entry.n)) });
-  else if (seconds >= DWELL_MIN_S) update({ profile: learn(state.profile, entry.card, 'dwell', null, seconds) });
+  const kind = judged ? 'left' : seconds < SKIP_S ? 'skip' : length > 0 && seconds >= FINISH_SHARE * length ? 'finish' : 'dwell';
+  judged = false;
+  emit(kind, entry.n, entry.card.cl, Math.round(seconds * 10) / 10);
+  if (kind === 'skip' || kind === 'finish') update({ profile: learn(state.profile, entry.card, kind, catalog.vecOf(entry.n)) });
+  else if (kind === 'dwell' && seconds >= DWELL_MIN_S) update({ profile: learn(state.profile, entry.card, 'dwell', null, seconds) });
 };
 
 const activate = (el) => {
@@ -455,6 +473,7 @@ const activate = (el) => {
   setUi(intro, INTRO_MS);
   intro = false;
   const entry = cardOf(el);
+  if (entry) emit('show', entry.n, entry.card.cl, entry.reason.kind === 'exploring' ? 1 : 0);
   if (entry && !hasBit(state.seen, entry.n)) update({ seen: withBit(state.seen, entry.n) });
   syncTools();
   fillAhead();
@@ -477,6 +496,7 @@ const toast = (msg, ms = 1600) => {
 };
 
 const learnFrom = (entry, event) => {
+  emit(event, entry.n, entry.card.cl);
   update({ profile: learn(state.profile, entry.card, event, catalog.vecOf(entry.n)) });
   grow(); // interests moved: fetch the clusters now nearest to them
 };
@@ -490,7 +510,8 @@ const toggleSave = (addOnly = false) => {
     saved: has ? state.saved.filter((n) => n !== entry.n) : [...state.saved, entry.n],
     savedCl: { ...state.savedCl, [entry.n]: entry.card.cl }, // remembers which shard holds the card
   });
-  if (!has) learnFrom(entry, 'save');
+  if (has) emit('unsave', entry.n, entry.card.cl);
+  else learnFrom(entry, 'save');
   syncSaved();
   toast(has ? 'Removed' : 'Saved');
   if (!has) refillAhead();
@@ -898,6 +919,18 @@ wrap.addEventListener('click', async (e) => {
   }
   const btn = e.target.closest('[data-act]');
   if (btn?.dataset.act === 'open-interests') return swapSheet(interestsSheet);
+  if (btn?.dataset.act === 'open-log' && Log) return swapSheet(() => Log.sheetHtml(events));
+  const log = e.target.closest('[data-log]')?.dataset.log;
+  if (log === 'copy') {
+    $('#sheet .log-dump').select();
+    document.execCommand('copy');
+    return toast('Copied');
+  }
+  if (log === 'clear') {
+    events = [];
+    Log.write(localStorage, events);
+    return rerenderSheet();
+  }
   if (btn?.dataset.act === 'open-set') {
     const el = active;
     closeSheet();
@@ -945,6 +978,8 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     finishDwell();
+    emit('hide');
+    Log?.write(localStorage, events);
     feed.querySelectorAll('video, audio').forEach((m) => m.pause());
   } else if (active) syncMedia(active);
   activeSince = performance.now();
@@ -1039,6 +1074,7 @@ const savedView = createSavedView({
   saved: () => [...state.saved].reverse().map((n) => [n, state.savedCl[n]]),
   onPick: (n, cl) => showWork(n, cl),
   onUnsave: (n) => {
+    emit('unsave', n, state.savedCl[n]);
     update({ saved: state.saved.filter((x) => x !== n) });
     syncSaved();
   },
@@ -1186,6 +1222,7 @@ $('.bar').addEventListener('pointerup', () => { if (app.classList.contains('ui')
 /* ---------- init ---------- */
 
 const init = async () => {
+  emit('start');
   catalog = await loadCatalog();
   app.dataset.nav = state.nav;
   app.classList.toggle('cc', Captions.available);

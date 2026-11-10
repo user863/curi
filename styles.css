@@ -447,3 +447,4 @@ video.art { background: #000; }
 .sheet .why { margin-top: 4px; }
 .sheet .actions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
 .sheet .actions .btn { margin-top: 0; }
+.sheet .log-dump { width: 100%; margin-top: 16px; padding: 8px; border: 1px solid rgba(0, 0, 0, 0.18); border-radius: 6px; background: transparent; color: var(--sdim); font: 11px/1.4 ui-monospace, monospace; resize: none; }
