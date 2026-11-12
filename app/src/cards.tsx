@@ -1,5 +1,5 @@
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AnimatedText, Text, familyFor } from './ui';
 import Svg, { Path } from 'react-native-svg';
 import { Image } from 'expo-image';
@@ -11,6 +11,7 @@ import { useExcerpt, SKIP_SECONDS } from './media';
 import { Loader } from './Loader';
 import { FLAT, peaksFor } from './peaks';
 import { Shell, grip, Zone } from './Shell';
+import { Zoom } from './Zoom';
 import { Palette, paletteFor, tonePalette } from './theme';
 
 export type Ctx = {
@@ -62,14 +63,7 @@ export const ImageCard = memo(({ entry, active, ctx, under }: Props) => {
   const { card } = entry;
   const { palette, key, onSwipe } = useCommon(entry, ctx);
   const [failed, setFailed] = useState(false);
-  const zoom = useRef<any>(null);
   const stageH = ctx.h - (ctx.top + 14) - (ctx.bottom + 62);
-  useEffect(() => { // leaving the card puts the picture back
-    if (active) return undefined;
-    grip.held = false;
-    zoom.current?.scrollResponderZoomTo({ x: 0, y: 0, width: ctx.w, height: stageH, animated: false });
-    return undefined;
-  }, [active, ctx.w, stageH]);
   const tap = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onTap = (_: Zone, double: boolean) => {
     clearTimeout(tap.current);
@@ -79,19 +73,7 @@ export const ImageCard = memo(({ entry, active, ctx, under }: Props) => {
   return (
     <Shell palette={palette} width={ctx.w} swipeable={active} under={under} onTap={onTap} onHold={(_, on) => on && ctx.similar(key)} onSwipe={onSwipe}>
       <View style={[styles.stage, { top: ctx.top + 14, bottom: ctx.bottom + 62 }]}>
-        <ScrollView
-          ref={zoom}
-          style={StyleSheet.absoluteFill}
-          contentContainerStyle={{ width: ctx.w, height: stageH }}
-          maximumZoomScale={5}
-          minimumZoomScale={1}
-          bouncesZoom
-          centerContent
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={(e) => { if (active) grip.held = (e.nativeEvent.zoomScale ?? 1) > 1.02; }} // zoomed in: a drag pans the picture, not the card
-        >
+        <Zoom width={ctx.w} height={stageH} active={active}>
           <Image
             source={{ uri: card.media.url }}
             contentFit="contain"
@@ -100,7 +82,7 @@ export const ImageCard = memo(({ entry, active, ctx, under }: Props) => {
             accessibilityLabel={`${card.title}, ${card.creator}, ${card.date}`}
             onError={() => { setFailed(true); ctx.unplayable(key); }}
           />
-        </ScrollView>
+        </Zoom>
       </View>
       {failed ? <Text style={[styles.failed, { color: palette.dim }]}>Image unavailable.</Text> : null}
       <Caption title={card.title} line={creditLine(card)} palette={palette} ctx={ctx} onPress={() => ctx.info(key)} />
@@ -262,7 +244,7 @@ export const VideoCard = memo(({ entry, active, near, ctx, under }: Props) => {
       <View style={[styles.stage, { top: ctx.top + 14, bottom: ctx.bottom + 62 + STRIP + 20 }]} pointerEvents="none">
         {near ? (
           <VideoView
-            ref={view} player={x.player} nativeControls={full} contentFit="contain" style={StyleSheet.absoluteFill}
+            ref={view} player={x.player} nativeControls={full} contentFit="contain" style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} // the web <video> needs a size, insets do not stretch it
             fullscreenOptions={{ enable: true }} onFullscreenEnter={() => setFull(true)} onFullscreenExit={() => setFull(false)}
           />
         ) : (
@@ -375,6 +357,7 @@ export const AudioCard = memo(({ entry, active, near, ctx, under }: Props) => {
         <Text style={{ fontSize: 13, color: palette.dim }}>{card.editorial.room === 'words' ? 'Read aloud' : 'Recording'} · {fmtTime(length)}</Text>
         <Text numberOfLines={3} style={{ fontSize: clampSize(28, 0.08, 36, ctx.w), fontWeight: '500', letterSpacing: -0.9, lineHeight: clampSize(28, 0.08, 36, ctx.w) * 1.04, color: palette.fg }}>{card.title}</Text>
       </View>
+      {Platform.OS === 'web' && near ? <VideoView player={x.player} style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} /> : null /* the web player plays only through a mounted element */}
       {x.failed ? <Text style={[styles.failed, { color: palette.dim }]}>Audio unavailable.</Text> : null}
       <Caption line={creditLine(card)} palette={palette} ctx={ctx} onPress={() => ctx.info(key)} />
     </Shell>

@@ -1,14 +1,16 @@
+import { Platform } from 'react-native';
 import Native from '../modules/commonplace-speech';
 import { speaker } from '../../js/speech.js';
 
 // Read-aloud for passages: the shared speaker (js/speech.js) drives the native Kokoro module through this bridge.
-const bridge = {
+// On the web there is no bridge: the speaker falls back to speechSynthesis.
+const bridge = Platform.OS === 'web' ? undefined : {
   postMessage: (m: any) => {
     if (m.op === 'read') Native.read(m.id, m.voice, m.chunks.map((c: any) => c.t), m.chunks.map((c: any) => c.gap));
     else Native.stop();
   },
 };
-Native.addListener('speech', (e) => (globalThis as any).commonplaceSpeech?.(e));
+if (Platform.OS !== 'web') Native.addListener('speech', (e) => (globalThis as any).commonplaceSpeech?.(e));
 
 // The speaker marks a card's state on `el.dataset.speech`; here the "element" is a stand-in that reports it.
 const standIn = (key: string, onState: (key: string, state: string | null) => void) => {

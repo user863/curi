@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Animated, AppState, FlatList, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, AppState, FlatList, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from './ui';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -210,7 +210,7 @@ const Screen = () => {
       const chosen = getState().voice;
       reader.start(key, body, verse, chosen && chosen !== 'random' ? chosen : undefined);
     },
-    voices: () => setSheet('voice'),
+    voices: () => { if (Platform.OS !== 'web') setSheet('voice'); }, // the web reads with the browser voice
     speakToggle: () => { reader.toggle(); },
     speaking,
   }), [w, h, insets, state.colour, sound, ui, feed, say, setUi, indexOf, scrollTo, items.length, reader, speaking, showView]);

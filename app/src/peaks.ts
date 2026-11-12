@@ -1,4 +1,6 @@
+import { Platform } from 'react-native';
 import Tape from '../modules/commonplace-speech';
+import { shape } from '../../js/wave.js';
 
 export const BARS = 96;
 export const FLAT = Array.from({ length: BARS }, () => 0.08);
@@ -13,7 +15,12 @@ export const peaksFor = (card: any): Promise<number[]> => {
   const hit = cache.get(card.id);
   if (hit) return hit;
   const m = card.media;
-  const run = () => Tape.audioPeaks(m.url, m.start, m.end, BARS).catch(() => { cache.delete(card.id); return [] as number[]; });
+  // A host without CORS headers gives the page no samples; the web then draws the bars from the card id, as the old web app did.
+  const run = () => Tape.audioPeaks(m.url, m.start, m.end, BARS).catch(() => {
+    if (Platform.OS === 'web') return shape(card.id, BARS) as number[];
+    cache.delete(card.id);
+    return [] as number[];
+  });
   const lane = turn++ % lanes.length;
   const job = lanes[lane].then(run);
   lanes[lane] = job;
