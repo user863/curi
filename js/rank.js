@@ -14,6 +14,7 @@ const K_NEG = 4;
 const MERGE_COS = 0.55; // feedback within this cosine of a centroid moves it instead of adding one
 const ETA = 0.3;
 const MAX_LABELS = 12;
+const THETA = 0.25; // how far the attribute draw can tilt a score
 
 const FACET_HALF_LIFE_DAYS = 30; // an interest not touched for a month counts half
 const COUNTER_HALF_LIFE_DAYS = 60; // category lean
@@ -35,6 +36,23 @@ const RECENT = 3;
 const TOP_M = 40;
 const JITTER = 0.03;
 
+// Beta(a, b) by two gammas (Marsaglia-Tsang); normals by Box-Muller from the injected rng.
+const normal = (rng) => Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng());
+const gamma = (shape, rng) => {
+  if (shape < 1) return gamma(shape + 1, rng) * rng() ** (1 / shape);
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    const x = normal(rng);
+    const v = (1 + c * x) ** 3;
+    if (v > 0 && Math.log(1 - rng()) < 0.5 * x * x + d - d * v + d * Math.log(v)) return d * v;
+  }
+};
+export const beta = (a, b, rng) => {
+  const x = gamma(a, rng);
+  return x / (x + gamma(b, rng));
+};
+
 const norm = (v) => Math.hypot(...v) || 1;
 const unit = (v) => {
   const n = norm(v);
@@ -48,7 +66,29 @@ const top = (obj, n) => Object.fromEntries(Object.entries(obj).sort((a, b) => b[
 // Features used for labels ("Because you saved ... tagged X").
 export const featuresOf = (card) => [`r:${card.editorial.room}`, ...card.editorial.tags.map((t) => `t:${t}`)];
 
-export const emptyProfile = () => ({ cents: [], negs: [], cat: {}, ver: 0 });
+// Beta counters per attribute, [wins, losses]: "r:<room>" and "k:<category>". Weak signals add little, firm ones more.
+export const emptyProfile = () => ({ cents: [], negs: [], cat: {}, attrs: {}, ver: 0 });
+
+// Profiles saved before the counters: wins from the labels of the interests, losses from those of the dislikes.
+export const withAttrs = (profile) => {
+  if (profile.attrs) return profile;
+  const attrs = {};
+  const count = (list, slot) => list.forEach((c) => Object.entries(c.labels ?? {}).forEach(([l, n]) => {
+    if (!l.startsWith('r:')) return;
+    attrs[l] ??= [0, 0];
+    attrs[l][slot] += n * (c.w ?? c.n ?? 1);
+  }));
+  count(profile.cents, 0);
+  count(profile.negs, 1);
+  return { ...profile, attrs };
+};
+
+const attributesOf = (card) => [`r:${card.editorial.room}`, `k:${card.cat}`];
+
+const bump = (attrs, card, delta) => attributesOf(card).reduce((o, k) => {
+  const [a, b] = o[k] ?? [0, 0];
+  return { ...o, [k]: delta > 0 ? [a + delta, b] : [a, b - delta] };
+}, attrs);
 
 // Time passes: interests and category lean fade (now in seconds). Called once at the start of a session.
 export const age = (profile, now) => {
@@ -57,7 +97,8 @@ export const age = (profile, now) => {
   const keep = (halfLife) => 0.5 ** (days / halfLife);
   const fade = (list) => list.map((c) => ({ ...c, w: weightOf(c) * keep(FACET_HALF_LIFE_DAYS) })).filter((c) => c.room || c.w >= MIN_WEIGHT);
   const cat = Object.fromEntries(Object.entries(profile.cat).map(([k, v]) => [k, v * keep(COUNTER_HALF_LIFE_DAYS)]));
-  return { ...profile, cents: fade(profile.cents), negs: fade(profile.negs), cat, at: now, ver: profile.ver + 1 };
+  const attrs = Object.fromEntries(Object.entries(profile.attrs ?? {}).map(([k, [a, b]]) => [k, [a * keep(COUNTER_HALF_LIFE_DAYS), b * keep(COUNTER_HALF_LIFE_DAYS)]]));
+  return { ...profile, cents: fade(profile.cents), negs: fade(profile.negs), cat, attrs, at: now, ver: profile.ver + 1 };
 };
 
 const weightOf = (c) => c.w ?? c.n; // profiles saved before weights count their number of touches
@@ -95,12 +136,13 @@ export const learn = (profile, card, event, vec, seconds = 0) => {
   if (!delta) return profile;
   const cat = Object.fromEntries(Object.entries(profile.cat).map(([k, v]) => [k, v * DECAY]));
   cat[card.cat] = clamp((cat[card.cat] || 0) + delta);
-  if (event === 'dwell') return { ...profile, cat };
+  const attrs = bump(profile.attrs ?? {}, card, delta);
+  if (event === 'dwell') return { ...profile, cat, attrs };
   const labels = featuresOf(card);
   const extra = { saves: event === 'save' ? 1 : 0, mores: event === 'more' ? 1 : 0 };
   return delta > 0
-    ? { ...profile, cat, cents: merge(profile.cents, vec, delta, labels, K_POS, extra, delta >= 1), ver: profile.ver + 1 }
-    : { ...profile, cat, negs: merge(profile.negs, vec, delta, labels, K_NEG, {}, true), ver: profile.ver + 1 };
+    ? { ...profile, cat, attrs, cents: merge(profile.cents, vec, delta, labels, K_POS, extra, delta >= 1), ver: profile.ver + 1 }
+    : { ...profile, cat, attrs, negs: merge(profile.negs, vec, delta, labels, K_NEG, {}, true), ver: profile.ver + 1 };
 };
 
 // Picking a room in onboarding or Interests seeds a centroid and nudges the mix toward its categories.
@@ -147,8 +189,14 @@ export const matchAll = (index, profile) => {
   return out;
 };
 
-// Interest x quality for every work.
-export const scoreAll = (index, profile) => {
+// Beta(1 + wins, 1 + losses) draw per attribute, from the injected rng; 0.5 on average when nothing is known.
+export const draw = (profile, key, rng) => {
+  const [a, b] = profile.attrs?.[key] ?? [0, 0];
+  return beta(1 + a, 1 + b, rng);
+};
+
+// Interest x quality for every work. With rng, the room and category counters tilt it (Thompson draw, at most +-THETA).
+export const scoreAll = (index, profile, rng) => {
   const { n, dim, emb, quality } = index;
   const out = new Float32Array(n);
   const neg = Float32Array.from(profile.negs.flatMap((c) => c.v));
@@ -165,9 +213,14 @@ export const scoreAll = (index, profile) => {
     }
     return worst;
   };
+  const tilt = rng && Object.keys(profile.attrs ?? {}).length > 0;
+  const roomIds = Array.isArray(index.rooms) ? index.rooms : index.manifest?.roomOrder; // catalogs carry `rooms` as a label map
+  const rooms = tilt ? roomIds?.map((r) => draw(profile, `r:${r}`, rng)) : null;
+  const cats = tilt ? index.categories?.map((c) => draw(profile, `k:${c.id ?? c}`, rng)) : null;
   for (let i = 0; i < n; i++) {
     const interest = sigmoid(5 * (match[i] - 0.25 - 0.6 * (kn ? dislike(i * dim) : 0)));
-    out[i] = interest * (1 + quality[i] / 250);
+    const theta = tilt ? ((rooms?.[index.room[i]] ?? 0.5) + (cats?.[index.cat[i]] ?? 0.5)) / 2 : 0.5;
+    out[i] = interest * (1 + quality[i] / 250) * (1 + THETA * 2 * (theta - 0.5));
   }
   return out;
 };

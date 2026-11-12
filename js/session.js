@@ -24,6 +24,16 @@ const WILD_QUALITY_RANK = 0.9;
 const WILD_SAMPLE = 1500;
 const LONG = ['video', 'audio'];
 
+// Energy the slot aims at, 0 (still) to 1 (intense): a set builds toward its peak with a breath before it.
+// A work's energy is index.energy (1..255, 0 unknown, js/pack energy column); distance from the target lowers a score by at most PACE.
+export const ENERGY_AT = { anchor: 0.45, familiar: 0.45, stretch: 0.6, wildcard: 0.7, rest: 0.15, peak: 0.85 };
+const PACE = 0.5;
+export const pace = (scores, energy, kind) => {
+  const target = ENERGY_AT[kind];
+  if (!energy || target === undefined) return scores;
+  return Float32Array.from(scores, (s, i) => (energy[i] ? s * (1 - PACE * Math.abs(energy[i] / 255 - target)) : s));
+};
+
 // previous: outcomes of the set just finished ('skip' or anything else), or null.
 // More than half skipped: the stretch becomes familiar. Nothing skipped: a second stretch.
 export const planFor = ({ sittingSet, previous }) => {
@@ -45,7 +55,8 @@ const qualityAt = (index, rng, rank) => {
 
 // Picks the card for a slot kind. Falls back to the plain ranker when the slot finds nothing, so a set never stalls.
 // match: () => Float32Array, cosine to the closest interest per row (js/rank.js matchAll).
-export const pickFor = ({ kind, index, profile, scores, match, taken, shown, rng, only = null }) => {
+export const pickFor = ({ kind, index, profile, scores: raw, match, taken, shown, rng, only = null }) => {
+  const scores = pace(raw, index.energy, kind);
   const codes = index.categories.map((c) => c.id);
   const last = shown.length ? index.posOf(shown[shown.length - 1]) : -1;
   const lastLong = last >= 0 && LONG.includes(codes[index.cat[last]]);
@@ -59,7 +70,7 @@ export const pickFor = ({ kind, index, profile, scores, match, taken, shown, rng
     switch (kind) {
       case 'stretch': {
         const m = match();
-        const bump = Float32Array.from(scores, (s, i) => (profileHas(profile) ? Math.exp(-(((m[i] - STRETCH_AT) / STRETCH_WIDTH) ** 2)) * (1 + index.quality[i] / 250) : s));
+        const bump = pace(Float32Array.from(raw, (s, i) => (profileHas(profile) ? Math.exp(-(((m[i] - STRETCH_AT) / STRETCH_WIDTH) ** 2)) * (1 + index.quality[i] / 250) : s)), index.energy, kind);
         return () => withScores(bump);
       }
       case 'wildcard': {
@@ -70,7 +81,7 @@ export const pickFor = ({ kind, index, profile, scores, match, taken, shown, rng
       case 'rest':
         return () => slot({ explore: 'never', only: only === null ? ['text'] : only.includes('text') ? ['text'] : only });
       case 'peak':
-        return () => withScores(Float32Array.from(scores, (s, i) => s * (1 + index.quality[i] / 250)));
+        return () => withScores(pace(Float32Array.from(raw, (s, i) => s * (1 + index.quality[i] / 250)), index.energy, kind));
       default:
         return () => slot({ explore: 'never' });
     }

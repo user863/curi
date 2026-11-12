@@ -1,7 +1,7 @@
 // node --test tools/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyProfile, learn, age, pickNext } from '../js/rank.js';
+import { emptyProfile, learn, age, pickNext, withAttrs, draw } from '../js/rank.js';
 
 const unit = (i, dim = 8) => Array.from({ length: dim }, (_, d) => (d === i ? 1 : 0));
 const card = { cat: 'visual', editorial: { room: 'r', tags: [] } };
@@ -64,4 +64,28 @@ test('repeat caps: at most 2 per source in 10, 1 per creator in 20, relaxed only
   const same = world([[0, 5], [0, 5]]);
   const last = pickNext({ index: same, profile: emptyProfile(), scores: new Float32Array(2), taken: (id) => id === 0, shown: [0], rng: () => 0.5 });
   assert.equal(last.id, 1, 'same creator is allowed when it is all that remains');
+});
+
+test('learn keeps Beta counters per room and category, firm signals more than weak ones', () => {
+  const card = { cat: 'visual', editorial: { room: 'people', tags: [] } };
+  let p = learn(emptyProfile(), card, 'save', unit(0));
+  p = learn(p, card, 'skip', unit(0));
+  assert.deepEqual(p.attrs['r:people'], [1, 0.5]);
+  assert.deepEqual(p.attrs['k:visual'], [1, 0.5]);
+});
+
+test('profiles without counters get them from their interests', () => {
+  const old = { cents: [{ v: unit(0), n: 2, w: 2, labels: { 'r:people': 2, 't:x': 1 } }], negs: [{ v: unit(1), n: 1, w: 1, labels: { 'r:cities': 1 } }], cat: {}, ver: 0 };
+  assert.deepEqual(withAttrs(old).attrs, { 'r:people': [4, 0], 'r:cities': [0, 1] });
+  const once = withAttrs(old);
+  assert.equal(withAttrs(once), once);
+});
+
+test('a room the reader keeps skipping is drawn lower than one they save', () => {
+  let p = emptyProfile();
+  const liked = { cat: 'visual', editorial: { room: 'a', tags: [] } };
+  const disliked = { cat: 'visual', editorial: { room: 'b', tags: [] } };
+  for (let i = 0; i < 6; i++) { p = learn(p, liked, 'save', unit(0)); p = learn(p, disliked, 'less', unit(1)); }
+  const rng = () => 0.5;
+  assert.ok(draw(p, 'r:a', rng) > draw(p, 'r:b', rng));
 });

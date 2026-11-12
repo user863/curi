@@ -13,7 +13,7 @@ log('directory (manifest + centroids)');
 let profile = emptyProfile();
 const ids = cat.categories.map((c) => c.id);
 const mix = () => shares(profile, ids);
-for (const r of ['film', 'open-air']) profile = withRoom(profile, r, true, cat.roomVec(r), cat.manifest.roomCategories[r]);
+for (const r of ['film', 'landscapes']) profile = withRoom(profile, r, true, cat.roomVec(r), cat.manifest.roomCategories[r]);
 await cat.ensureClusters({ profile, shares: mix(), want: 120, explore: 0 });
 log('first cards ready');
 await cat.ensureClusters({ profile, shares: mix(), want: 300, explore: 2 });

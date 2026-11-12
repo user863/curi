@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extraction lab</title>
+<style>
+:root { --bg:#f4f4f2; --fg:#151515; --dim:#777; --line:#d9d9d4; --card:#fff; }
+@media (prefers-color-scheme: dark) { :root { --bg:#141414; --fg:#eee; --dim:#999; --line:#2b2b2b; --card:#1c1c1c; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 -apple-system, "Helvetica Neue", sans-serif; }
+header, section.tune { padding:20px 16px 0; max-width:1500px; margin:0 auto; }
+h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:15px; margin:22px 0 8px; } .dim { color:var(--dim); }
+.controls { position:sticky; top:0; z-index:5; background:var(--bg); padding:10px 16px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px; align-items:center; max-width:1500px; margin:0 auto; }
+input, select, button { font:inherit; padding:6px 8px; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:6px; }
+button { cursor:pointer; }
+.grid { max-width:1500px; margin:0 auto; padding:16px; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
+.card img.thumb { width:100%; aspect-ratio:4/3; object-fit:contain; background:color-mix(in srgb, var(--fg) 6%, transparent); display:block; }
+.pal { display:flex; height:22px; } .pal i { display:block; height:100%; }
+.body { padding:10px 12px 12px; display:grid; gap:6px; }
+.title { font-weight:600; } .meta { font-size:12px; color:var(--dim); }
+.nums { font-size:11px; color:var(--dim); display:flex; flex-wrap:wrap; gap:4px 10px; font-variant-numeric:tabular-nums; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; } .chip { font-size:11px; padding:1px 7px; border-radius:99px; border:1px solid var(--line); }
+.chip.subject { background:color-mix(in srgb, #3a7 14%, transparent); } .chip.style { background:color-mix(in srgb, #67c 14%, transparent); }
+.chip.mood { background:color-mix(in srgb, #c76 16%, transparent); } .chip.medium { background:color-mix(in srgb, #cb3 18%, transparent); } .chip.light { background:color-mix(in srgb, #6bc 16%, transparent); }
+.chip.jc { background:color-mix(in srgb, #e8a 14%, transparent); }
+.chip.src { border-style:dashed; color:var(--dim); } .label { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--dim); margin-top:2px; }
+.hide-tags .tags { display:none; }
+table { border-collapse:collapse; font-size:12px; } td, th { padding:2px 10px 2px 0; text-align:left; font-variant-numeric:tabular-nums; }
+.bar { display:inline-block; height:8px; background:var(--fg); opacity:.55; vertical-align:middle; }
+.tunewrap { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:24px; }
+</style></head>
+<body class="">
+<header>
+  <h1>Extraction lab</h1>
+  <div class="dim" id="summary"></div>
+</header>
+<section class="tune" id="tune"></section>
+<div class="controls">
+  <input id="q" type="search" placeholder="Search title, creator, tags" size="26">
+  <select id="src"><option value="">All sources</option></select>
+  <select id="hue"><option value="">Any hue</option></select>
+  <select id="term"><option value="">Any SigLIP term</option></select>
+  <label><input type="checkbox" id="onlyjoy"> Only with JoyCaption</label>
+  <select id="sort"><option value="">Sample order</option><option value="L">Lightness</option><option value="w">Warmth</option><option value="ch">Chroma</option><option value="con">Contrast</option><option value="hue">Hue</option></select>
+  <label><input type="checkbox" id="showtags" checked> Show tags</label>
+  <button id="reset" hidden>Back to sample order</button>
+  <span class="dim" id="count"></span>
+</div>
+<main class="grid" id="grid"></main>
+<div style="text-align:center;padding:10px 0 40px"><button id="more">Show more</button></div>
+<script>
+const DATA = /*DATA*/null;
+const $ = (s) => document.querySelector(s);
+const items = DATA.items;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const dim = DATA.dim;
+const bytes = Uint8Array.from(atob(DATA.emb), (c) => c.charCodeAt(0));
+const vec = (i) => new Int8Array(bytes.buffer, i * dim, dim);
+const cos = (a, b) => { let s = 0; const x = vec(a), y = vec(b); for (let d = 0; d < dim; d++) s += x[d] * y[d]; return s; };
+const HUE_ORDER = ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'indigo', 'violet', 'magenta', 'pink', 'neutral'];
+const SHOW = 60;
+let shown = SHOW, order = items.map((x) => x.i), like = null;
+
+// summary
+const count = (f) => items.reduce((m, x) => (m[f(x)] = (m[f(x)] || 0) + 1, m), {});
+const srcs = count((x) => x.src);
+$('#summary').innerHTML = `${items.length} images from ${Object.keys(srcs).length} source groups (${Object.entries(srcs).map(([k, v]) => `${k} ${v}`).join(', ')}). ` +
+  `Colour: OKLab k-means. Tags: ${esc(DATA.model)}, ${DATA.terms} terms, a tag counts at z ≥ 2.5 over this set. JoyCaption Alpha Two booru tags exist for ${DATA.joy} of them (slow, run locally). Apple Vision labels and the sources' own tags are shown for comparison.`;
+for (const [k] of Object.entries(srcs)) $('#src').insertAdjacentHTML('beforeend', `<option>${esc(k)}</option>`);
+for (const h of HUE_ORDER) $('#hue').insertAdjacentHTML('beforeend', `<option>${h}</option>`);
+const termCount = {};
+items.forEach((x) => Object.values(x.sig).flat().forEach((t) => { termCount[t.term] = (termCount[t.term] || 0) + 1; }));
+Object.entries(termCount).sort((a, b) => b[1] - a[1]).forEach(([t, n]) => $('#term').insertAdjacentHTML('beforeend', `<option value="${esc(t)}">${esc(t)} (${n})</option>`));
+
+// tuning section
+if (DATA.tune) {
+  const m = DATA.tune.mean_auc, rows = DATA.tune.rows;
+  const names = { full: 'Full sentences', stripped: 'Filler words removed', label: 'Bare term', mix: 'Stripped + bare term' };
+  const best = Object.entries(m).sort((a, b) => b[1] - a[1])[0][0];
+  $('#tune').innerHTML = `<h2>Prompt wording</h2><p class="dim">Mean AUC over ${DATA.tune.terms_evaluated} terms that the sources' own metadata also names (0.5 is chance, 1 is perfect).</p>
+  <div class="tunewrap"><div><table>${Object.keys(names).map((k) => `<tr><td>${names[k]}${k === best ? ' ✓' : ''}</td><td>${m[k].toFixed(3)}</td><td><span class="bar" style="width:${Math.round((m[k] - 0.5) * 400)}px"></span></td></tr>`).join('')}</table></div>
+  <div><table><tr><th>term</th><th>n</th>${Object.keys(names).map((k) => `<th>${k}</th>`).join('')}</tr>${rows.slice().sort((a, b) => b.positives - a.positives).slice(0, 18).map((r) => `<tr><td>${esc(r.term)}</td><td>${r.positives}</td>${Object.keys(names).map((k) => `<td>${r[k].toFixed(2)}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
+}
+
+const card = (x) => `<article class="card" data-i="${x.i}">
+  <img class="thumb" loading="lazy" src="thumbs/${x.i}.jpg" alt="">
+  <div class="pal">${x.pal.map(([h, w]) => `<i style="background:${h};flex:${w}"></i>`).join('')}</div>
+  <div class="body">
+    <div class="title">${esc(x.t)}</div>
+    <div class="meta">${esc(x.c)}${x.dt ? ', ' + esc(x.dt) : ''} · ${esc(x.inst)}</div>
+    <div class="nums"><span>L ${x.L}</span><span>contrast ${x.con}</span><span>warmth ${x.w}</span><span>chroma ${x.ch}</span><span>${x.hue}${x.mono ? ' · mono' : ''}</span><span>${x.wh[0]}×${x.wh[1]}</span></div>
+    <div class="tags">
+      ${Object.entries(x.sig).map(([f, ts]) => ts.length ? `<div class="chips">${ts.map((t) => `<span class="chip ${f}" title="${f}, z ${t.z}">${esc(t.term)}</span>`).join('')}</div>` : '').join('')}
+      ${x.tags.length ? `<div class="label">source tags</div><div class="chips">${x.tags.slice(0, 8).map((t) => `<span class="chip src">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${x.jc.length ? `<div class="label">JoyCaption (booru)</div><div class="chips">${x.jc.map((t) => `<span class="chip jc">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${x.av.length ? `<div class="label">Apple Vision</div><div class="meta">${x.av.map(([l, c]) => `${esc(l)} ${c.toFixed(2)}`).join(', ')}</div>` : ''}
+    </div>
+    <div><button data-like="${x.i}">More like this</button> <a class="meta" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">source</a></div>
+  </div></article>`;
+
+const matches = () => {
+  const q = $('#q').value.trim().toLowerCase(), s = $('#src').value, h = $('#hue').value, t = $('#term').value;
+  return order.filter((i) => {
+    const x = items[i];
+    return (!$('#onlyjoy').checked || x.jc.length) && (!s || x.src === s) && (!h || x.hue === h) && (!t || Object.values(x.sig).flat().some((y) => y.term === t))
+      && (!q || (x.t + ' ' + x.c + ' ' + x.tags.join(' ') + ' ' + Object.values(x.sig).flat().map((y) => y.term).join(' ')).toLowerCase().includes(q));
+  });
+};
+const render = () => {
+  const list = matches();
+  $('#grid').innerHTML = list.slice(0, shown).map((i) => card(items[i])).join('');
+  $('#count').textContent = `${Math.min(shown, list.length)} of ${list.length}` + (like !== null ? ` · most like #${like}` : '');
+  $('#more').hidden = shown >= list.length;
+  $('#reset').hidden = like === null;
+};
+const resort = () => {
+  const k = $('#sort').value;
+  like = null;
+  order = items.map((x) => x.i);
+  if (k === 'hue') order.sort((a, b) => HUE_ORDER.indexOf(items[a].hue) - HUE_ORDER.indexOf(items[b].hue) || items[b].ch - items[a].ch);
+  else if (k) order.sort((a, b) => items[b][k] - items[a][k]);
+  shown = SHOW; render();
+};
+['#q', '#src', '#hue', '#term', '#onlyjoy'].forEach((s) => $(s).addEventListener('input', () => { shown = SHOW; render(); }));
+$('#sort').addEventListener('input', resort);
+$('#showtags').addEventListener('input', (e) => document.body.classList.toggle('hide-tags', !e.target.checked));
+$('#more').addEventListener('click', () => { shown += SHOW; render(); });
+$('#reset').addEventListener('click', () => { $('#sort').value = ''; resort(); });
+$('#grid').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-like]'); if (!b) return;
+  like = Number(b.dataset.like);
+  order = items.map((x) => [x.i, cos(like, x.i)]).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+  shown = SHOW; render(); scrollTo({ top: 0 });
+});
+render();
+</script></body></html>

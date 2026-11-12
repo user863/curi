@@ -724,5 +724,489 @@
         "skip_frac": 0.03
       }
     ]
-  }
+  },
+  "citizen_dj": [
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-edison",
+      "collection": "loc-edison",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-variety-stage",
+      "collection": "loc-variety-stage",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-fma",
+      "collection": "loc-fma",
+      "license": "CC0"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-jukebox-blues",
+      "collection": "loc-jukebox-blues",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-jukebox-classical",
+      "collection": "loc-jukebox-classical",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-jukebox-folk-songs",
+      "collection": "loc-jukebox-folk-songs",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-jukebox-jazz",
+      "collection": "loc-jukebox-jazz",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-jukebox-musical-theater",
+      "collection": "loc-jukebox-musical-theater",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-jukebox-opera",
+      "collection": "loc-jukebox-opera",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-jukebox-popular",
+      "collection": "loc-jukebox-popular",
+      "license": "PDM"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-joe-smith",
+      "collection": "loc-joe-smith",
+      "license": "LOC-ATTR"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-tony-schwartz",
+      "collection": "loc-tony-schwartz",
+      "license": "LOC-FREE"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-dialect",
+      "collection": "loc-american-english-dialect-recordings",
+      "license": "LOC-FREE"
+    },
+    {
+      "kind": "audio",
+      "room": "sound",
+      "tags": [
+        "audio",
+        "recording",
+        "library-of-congress"
+      ],
+      "tones": [
+        "ink",
+        "sun",
+        "sky",
+        "mauve"
+      ],
+      "take": 400,
+      "max_per_group": 400,
+      "name": "cdj-musicbox",
+      "collection": "loc-musicbox",
+      "license": "LOC-FREE"
+    }
+  ],
+  "europeana_bulk": [
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "art"
+      ],
+      "workers": 48,
+      "name": "eu-art-1",
+      "take": 25000,
+      "per_provider": 500,
+      "max_per_group": 25000,
+      "theme": "art"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "fashion"
+      ],
+      "workers": 48,
+      "name": "eu-fashion-1",
+      "take": 12000,
+      "per_provider": 600,
+      "max_per_group": 2000,
+      "theme": "fashion"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "design"
+      ],
+      "workers": 48,
+      "name": "eu-design-1",
+      "take": 7000,
+      "per_provider": 350,
+      "max_per_group": 1166,
+      "query": "design OR \"industrial design\" OR furniture OR \"decorative arts\" OR poster OR ceramics OR glassware OR typography"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "archaeology",
+        "history"
+      ],
+      "workers": 48,
+      "name": "eu-history-arch",
+      "take": 8000,
+      "per_provider": 400,
+      "max_per_group": 1333,
+      "theme": "archaeology",
+      "room": "deep-time"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "history"
+      ],
+      "workers": 48,
+      "name": "eu-history-ww1",
+      "take": 6000,
+      "per_provider": 300,
+      "max_per_group": 1000,
+      "theme": "ww1"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "history"
+      ],
+      "workers": 48,
+      "name": "eu-history-1",
+      "take": 12000,
+      "per_provider": 600,
+      "max_per_group": 2000,
+      "query": "history OR historical OR \"world war\" OR revolution OR monarchy OR \"daily life\""
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "art"
+      ],
+      "workers": 48,
+      "name": "eu-art-2",
+      "take": 10000,
+      "per_provider": 1000,
+      "max_per_group": 1666,
+      "theme": "art"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "design"
+      ],
+      "workers": 48,
+      "name": "eu-design-2",
+      "take": 7000,
+      "per_provider": 700,
+      "max_per_group": 1166,
+      "query": "design OR \"industrial design\" OR furniture OR \"decorative arts\" OR poster OR ceramics OR glassware OR typography"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 4,
+      "providers": 60,
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana",
+        "art"
+      ],
+      "workers": 48,
+      "name": "eu-art-3",
+      "take": 10000,
+      "per_provider": 1500,
+      "max_per_group": 1666,
+      "theme": "art"
+    }
+  ]
 }

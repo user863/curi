@@ -10,9 +10,10 @@ from .archive import excerpt
 from .common import reject, stable_pick
 
 API = "https://api.europeana.eu/record/v2/search.json"
+API_DELAY = 0.125  # seconds between API calls (0.25 before)
 
 def search(key, src, extra, rows):
-    params = [("query", "*"), ("qf", f"TYPE:{src['type']}"), ("reusability", "open"), ("media", "true"),
+    params = [("query", src.get("query", "*")), ("qf", f"TYPE:{src['type']}"), ("reusability", "open"), ("media", "true"),
               ("rows", rows), ("profile", extra.pop("profile", "rich"))]
     if src.get("theme"):
         params.append(("theme", src["theme"]))
@@ -21,7 +22,7 @@ def search(key, src, extra, rows):
     if src.get("min_tier"):
         params.append(("qf", f"contentTier:{src['min_tier']}"))
     params += list(extra.items())
-    return get_json(f"{API}?{urllib.parse.urlencode(params)}", delay=0.25, headers={"X-Api-Key": key})
+    return get_json(f"{API}?{urllib.parse.urlencode(params)}", delay=API_DELAY, headers={"X-Api-Key": key})
 
 def providers(key, src):
     data = search(key, src, {"profile": "facets", "facet": "DATA_PROVIDER", "f.DATA_PROVIDER.facet.limit": src["providers"]}, 0)
@@ -93,6 +94,9 @@ def admit(card, src, stats):
     if card["type"] == "image":
         verdict, secure = probe.secure_image(url)
         card["media"]["url"] = secure
+        if verdict == "too-large":  # admitted and marked, to see how they load on a phone
+            card["editorial"]["tags"].append("large-image")
+            return True, "yes"
         return verdict == "yes", verdict
     if card["type"] == "video":
         verdict, seconds, size = probe.mp4_info(url)
@@ -131,7 +135,9 @@ def probe_all(cards, src, stats):
     """Keeps the cards whose media loads on a phone; probes in parallel."""
     out = []
     with ThreadPoolExecutor(max_workers=src.get("workers", 16)) as ex:
-        for card, (ok, verdict) in zip(cards, ex.map(lambda c: safe_admit(c, src, stats), cards)):
+        for i, (card, (ok, verdict)) in enumerate(zip(cards, ex.map(lambda c: safe_admit(c, src, stats), cards)), 1):
+            if i % 2000 == 0:
+                print(f"{src['name']}: probed {i} of {len(cards)}, {len(out)} usable, failed so far {stats.get(src['name'], {})}", flush=True)
             if ok:
                 out.append(card)
             else:

@@ -27,7 +27,7 @@ export const fmtTime = (s) => {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
 
-const LICENSE_LABEL = { CC0: 'CC0', PDM: 'Public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA' };
+const LICENSE_LABEL = { CC0: 'CC0', PDM: 'Public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA', 'LOC-FREE': 'Free to use', 'LOC-ATTR': 'Free to use, credit' };
 const licenseLabel = (r) => LICENSE_LABEL[r.license] || r.license;
 
 export const featureLabel = (feature, rooms) => {
@@ -174,7 +174,7 @@ export const infoSheetHtml = (card, { reason, rooms, categories, gallery = false
     ${ed.note ? `${label}<p class="note">${esc(ed.note)}</p>` : ''}
     <p class="link"><a href="${esc(card.source.url)}" target="_blank" rel="noopener noreferrer">${linkLabel[card.type]} ↗</a></p>
     ${whyHtml(card, reason, rooms, categories)}
-    <p class="line dim">Ranking runs on this device. Nothing about what you look at is sent anywhere.</p>
+    <p class="line dim">Ranking runs on this device. Nothing about what you look at is sent unless you opt in to share usage data.</p>
     <dl class="spec">${rows}</dl>
     <p class="actions">${gallery ? '<button type="button" class="btn ghost" data-act="open-set">More from this gallery</button>' : ''}<button type="button" class="btn ghost" data-act="open-interests">Settings</button></p>`;
 };

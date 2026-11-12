@@ -1,8 +1,20 @@
 # Curi
 
-A full-screen feed of art, text, film and audio from open collections, one card at a time. Ranking runs on the device and nothing about the reader leaves it. Every card shows where it comes from and under which licence.
+A full-screen feed of art, text, film and audio from open collections, one card at a time. Ranking runs on the device. Every card shows where it comes from and under which licence.
 
 Live: https://user863.github.io/curi/
+
+## Data collected
+
+Sharing usage data is optional and off until you opt in through a form in the app. Planned, not live yet: nothing is sent from the app today. If you opt in, Curi collects usage data to improve the ranking:
+
+- Time spent on each card (seconds) and how many cards were viewed per session.
+- Interactions: saves, skips, dislikes, similar-works taps, searches, colour and tag filters, opened sheets, scrubbing, fullscreen and zoom.
+- Metadata of the works involved (id, source, room, tags, colours, type).
+- A random install ID that stays on the device, so reports from one install can be linked over time. No name, email or phone number.
+- App version and device model.
+
+The data feeds the crowd priors in the ranking. Wording for the opt-in form and privacy policy is still to be written.
 
 ## How it works
 

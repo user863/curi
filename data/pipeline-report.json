@@ -1,26 +1,27 @@
 {
- "texts": {
-  "candidates": 444,
-  "added": 444,
-  "rejected": {}
- },
  "totals": {
-  "published": 59333,
-  "addedThisRun": 444,
+  "published": 97597,
+  "addedThisRun": 0,
   "types": {
-   "audio": 262,
+   "audio": 2016,
    "passage": 484,
    "video": 1026,
-   "image": 57561
+   "image": 94071
   },
   "rooms": {
    "words": 516,
-   "sound": 230,
+   "sound": 1984,
    "film": 1026,
-   "open-air": 9301,
-   "faces": 11055,
-   "interiors": 36763,
-   "deep-time": 442
+   "landscapes": 10280,
+   "paintings": 6465,
+   "objects": 12684,
+   "cities": 10166,
+   "interiors": 6112,
+   "manuscripts": 7437,
+   "deep-time": 5067,
+   "people": 12531,
+   "drawings": 13205,
+   "wildlife": 10124
   }
  }
 }

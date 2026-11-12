@@ -65,7 +65,7 @@ export const sheetHtml = (events) => {
     ['Median', s.medianMinutes === null ? shown(null) : `${shown(s.medianMinutes, ' min')}, ${s.medianCards} cards`],
   ];
   return `<h2 id="sheet-title">Activity log</h2>
-    <p class="line dim">What the feed showed and what you did, on this device only. Nothing here is sent anywhere.</p>
+    <p class="line dim">What the feed showed and what you did, on this device only. Nothing here is sent unless you opt in to share usage data.</p>
     <dl class="spec">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(String(v))}</dd></div>`).join('')}</dl>
     <textarea class="log-dump" readonly rows="6" aria-label="Log as JSON">${esc(JSON.stringify(events))}</textarea>
     <div class="actions">

@@ -3,7 +3,7 @@ Usage (from the project root): python3 -m pipeline.run [--only met,gutenberg,pre
 import argparse, collections, json
 from pathlib import Path
 from . import db, embed, export, quality, secrets, state
-from .sources import archive, cleveland, europeana, europeana_galleries, gutenberg, met, openverse, texts
+from .sources import archive, citizen_dj, cleveland, europeana, europeana_bulk, europeana_galleries, gutenberg, met, openverse, texts
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -33,6 +33,7 @@ def finish(card, overrides):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--only", default="", help="comma-separated source names")
+    ap.add_argument("--no-export", action="store_true", help="ingest only; write the pack in a later run")
     ap.add_argument("--refresh", action="store_true", help="re-evaluate works the database already holds")
     ap.add_argument("--retire", action="store_true", help="with --refresh: retire works that no longer qualify")
     args = ap.parse_args()
@@ -44,7 +45,9 @@ def main():
             ("gutenberg", lambda s: gutenberg.run(cfg["gutenberg"], s), cfg["gutenberg"]),
             ("texts", lambda s: texts.run(cfg["texts"], s), cfg["texts"])]
     jobs += [(a["name"], (lambda a: lambda s: archive.run(a, s))(a), a) for a in cfg["archive"]]
+    jobs += [(d["name"], (lambda d: lambda s: citizen_dj.run(d, s))(d), d) for d in cfg["citizen_dj"]]
     jobs += [(e["name"], (lambda e: lambda s: europeana.run(e, s))(e), e) for e in cfg["europeana"]]
+    jobs += [(e["name"], (lambda e: lambda s: europeana_bulk.run(e, s))(e), e) for e in cfg["europeana_bulk"]]
     jobs += [("europeana-galleries", lambda s: europeana_galleries.run(cfg["europeana_galleries"], s), cfg["europeana_galleries"])]
     jobs += [("openverse", lambda s: openverse.run(cfg["openverse"], s), cfg["openverse"])]
 
@@ -85,8 +88,9 @@ def main():
     if args.refresh and args.retire and not only:
         db.retire_missing(conn, [c["id"] for c in added], rev)
         conn.commit()
-    pack = export.write(conn, ROOT / "data" / "pack")
-    print("pack:", pack)
+    if not args.no_export:
+        pack = export.write(conn, ROOT / "data" / "pack")
+        print("pack:", pack)
     rows = conn.execute("SELECT type, room FROM work WHERE state='published'").fetchall()
     report["totals"] = {"published": len(rows), "addedThisRun": len(added),
                         "types": dict(collections.Counter(r["type"] for r in rows)),

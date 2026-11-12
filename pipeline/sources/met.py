@@ -59,16 +59,31 @@ def card(obj, tags, today):
                       "tone": tone_of(obj)},
     }
 
+PAGE = 500  # largest page the search returns
+
+def candidate_ids(dep, highlight):
+    """Object ids of one department with an image, paginated: highlights first, then the other public-domain works."""
+    for flag in ("isHighlight", "isPublicDomain") if highlight else ("isPublicDomain",):
+        offset = 0
+        while True:
+            q = urllib.parse.urlencode({"q": "*", flag: "true", "hasImages": "true", "departmentId": dep["departmentId"],
+                                        "limit": PAGE, "offset": offset})
+            ids = get_json(f"{B}/v1.1/search?{q}").get("objectIDs") or []
+            yield from ids
+            if len(ids) < PAGE:
+                break
+            offset += PAGE
+
 def run(cfg, stats):
     today = datetime.date.today().isoformat()
     departments = [d for d in get_json(f"{B}/v1/departments")["departments"]
                    if d["departmentId"] not in cfg.get("exclude_departments", [])]
     out = []
     for dep in departments:
-        q = urllib.parse.urlencode({"q": "*", "isHighlight": "true", "hasImages": "true",
-                                    "departmentId": dep["departmentId"], "limit": cfg["pool_per_department"]})
-        ids = get_json(f"{B}/v1.1/search?{q}").get("objectIDs") or []
-        for oid in ids[: cfg["pool_per_department"]]:
+        fresh = 0  # new works taken from this department; known ones are skipped without a fetch
+        for oid in candidate_ids(dep, highlight=True):
+            if fresh >= cfg["pool_per_department"]:
+                break
             if state.is_known(f"met-{oid}"):
                 reject(stats, NAME, "known")
                 continue
@@ -87,4 +102,5 @@ def run(cfg, stats):
             c = card(obj, tags, today)
             c["_score"], c["_group"], c["_source"] = score(obj, tags), obj["department"], NAME
             out.append(c)
+            fresh += 1
     return out

@@ -1,0 +1,37 @@
+{
+ "subject": {
+  "portrait": "a portrait of a person", "landscape": "a landscape", "seascape": "a sea view with water and waves", "cityscape": "a view of a city with buildings",
+  "still life": "a still life of objects on a table", "flowers": "flowers", "animal": "an animal", "bird": "a bird", "horse": "a horse", "dog": "a dog",
+  "nude": "a nude figure", "mythology": "a scene from classical mythology", "religion": "a religious scene with saints or angels", "battle": "a battle scene",
+  "interior": "the interior of a room", "architecture": "a building or architectural structure", "church": "a church or cathedral", "ship": "a ship or boat",
+  "plants": "plants and leaves", "trees": "trees in a forest", "mountains": "mountains", "sky and clouds": "sky and clouds", "night": "a scene at night",
+  "crowd": "a crowd of people", "children": "children", "woman": "a woman", "man": "a man", "dance": "people dancing", "music": "a musical instrument",
+  "clothing": "clothing or a garment", "fashion": "a fashion photograph", "jewellery": "a piece of jewellery", "eyewear": "a pair of glasses", "tableware": "a vase, bowl or cup",
+  "furniture": "a piece of furniture", "weapon": "a sword or weapon", "map": "a map", "text page": "a page of printed text", "manuscript": "a medieval manuscript page",
+  "scientific diagram": "a scientific or technical diagram", "microscopy": "a microscope image of cells", "textile": "a woven textile or fabric pattern", "pattern": "a repeating decorative pattern",
+  "machine": "a machine or industrial equipment", "street": "a street scene", "village": "a village or rural scene", "garden": "a garden", "river": "a river or lake",
+  "winter": "a snowy winter scene", "fruit": "fruit", "food": "food", "skeleton": "a skull or skeleton", "sculpture": "a sculpture", "coin": "a coin or medal"
+ },
+ "medium": {
+  "oil painting": "an oil painting", "watercolour": "a watercolour painting", "drawing": "a pencil or ink drawing", "print": "an engraving or woodcut print", "etching": "an etching",
+  "photograph": "a photograph", "black and white photograph": "a black and white photograph", "sculpture medium": "a sculpture in stone or bronze", "ceramic": "a ceramic or porcelain object",
+  "glass": "an object made of glass", "metalwork": "an object made of metal", "enamel": "cloisonné or enamel work", "textile medium": "a textile", "poster": "a poster with lettering",
+  "illustration": "a book illustration", "lithograph": "a lithograph", "icon": "a gilded icon painting", "digital": "a digital image or render"
+ },
+ "style": {
+  "medieval": "medieval art", "renaissance": "renaissance art", "baroque": "baroque art", "rococo": "rococo art", "neoclassical": "neoclassical art", "romantic": "romantic painting",
+  "impressionist": "impressionist painting", "art nouveau": "art nouveau design", "art deco": "art deco design", "modernist": "modernist art", "abstract": "abstract art", "surreal": "surrealist art",
+  "japanese": "traditional Japanese art", "chinese": "traditional Chinese art", "islamic": "islamic art with geometric ornament", "egyptian": "ancient Egyptian art", "greek roman": "ancient Greek or Roman art",
+  "folk": "folk art", "realist": "a realistic painting", "documentary photo": "a documentary photograph", "snapshot": "a casual snapshot", "studio photo": "a studio photograph of an object on a plain background",
+  "macro": "a macro close-up photograph"
+ },
+ "mood": {
+  "calm": "a calm and peaceful image", "dramatic": "a dramatic and intense image", "melancholy": "a sad and melancholic image", "joyful": "a joyful and cheerful image", "mysterious": "a mysterious and eerie image",
+  "tender": "a tender and intimate image", "serene": "a serene image", "ornate": "an ornate and richly decorated image", "minimal": "a minimal and clean image", "chaotic": "a busy and chaotic image",
+  "sombre": "a dark and sombre image", "playful": "a playful and humorous image", "solemn": "a solemn and formal image", "dreamlike": "a dreamlike image"
+ },
+ "light": {
+  "dark": "a very dark image", "bright": "a bright and airy image", "high contrast": "an image with strong contrast between light and shadow", "soft light": "an image with soft diffuse light",
+  "golden light": "an image in warm golden light", "plain background": "an object on a plain neutral background", "sunset": "a sunset sky"
+ }
+}

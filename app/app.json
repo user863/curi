@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Commonplace",
+    "slug": "commonplace",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.johannbraun.commonplace",
+      "appleTeamId": "TLM2CHJBJF",
+      "supportsTablet": false,
+      "requireFullScreen": true,
+      "infoPlist": {
+        "UIStatusBarHidden": true,
+        "UIBackgroundModes": ["audio"]
+      }
+    },
+    "plugins": [
+      ["expo-build-properties", { "ios": { "deploymentTarget": "18.0", "useFrameworks": "dynamic" } }],
+      "./plugins/withBundledFiles",
+      "./plugins/withAppPackages"
+    ]
+  }
+}

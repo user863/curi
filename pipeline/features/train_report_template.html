@@ -1,0 +1,48 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Training set lab</title>
+<style>
+:root{color-scheme:light dark;--bg:#fff;--fg:#111;--mut:#777;--line:#ddd}
+@media (prefers-color-scheme:dark){:root{--bg:#111;--fg:#eee;--mut:#999;--line:#333}}
+body{margin:0;font:13px/1.4 system-ui;background:var(--bg);color:var(--fg)}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;z-index:2}
+input,select{font:inherit;padding:4px 6px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px}
+#n{color:var(--mut)}
+main{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:14px}
+.c{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.c img{display:block;width:100%;height:180px;object-fit:cover;background:#8884}
+.c div{padding:6px 8px}.c b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pal{display:flex;height:10px}.pal i{display:block}
+.m{color:var(--mut);font-size:12px}.jc{font-size:12px;margin-top:4px}.st{font-size:12px;margin-top:4px;padding-top:4px;border-top:1px dashed var(--line)}.hit{font-weight:600;color:#2a9d5c}.lab{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em}.miss{opacity:.75}
+button{font:inherit;padding:4px 10px}
+</style>
+<header>
+<input id="q" placeholder="search title, creator, tags" size="28">
+<select id="src"><option value="">all sources</option></select>
+<select id="hue"><option value="">all hues</option></select>
+<select id="mono"><option value="">colour + mono</option><option value="1">monochrome</option><option value="0">not mono</option></select>
+<select id="lab"><option value="">labelled or not</option><option value="1">labelled</option><option value="0">not yet</option></select>
+<select id="split"><option value="">any split</option><option value="held">held-out (fair check)</option><option value="train">trained on</option><option value="none">unlabelled</option></select>
+<select id="sort"><option value="">file order</option><option value="L">lightness</option><option value="ch">chroma</option><option value="w">warmth</option></select>
+<span id="n"></span>
+</header>
+<main id="g"></main>
+<p style="text-align:center"><button id="more">More</button></p>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let all=[],list=[],shown=0;const PAGE=120;
+const fill=(el,vals)=>vals.forEach(v=>el.add(new Option(v,v)));
+const card=i=>`<a class="c" href="${esc(i.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none"><img loading="lazy" src="thumbs/${esc(i.u)}.jpg"><div class="pal">${i.pal.map(p=>`<i style="background:${p[0]};flex:${p[1]}"></i>`).join('')}</div><div><b>${esc(i.t)||'untitled'}</b><span class="m">${esc(i.src)} · ${esc(i.hue??'?')}${i.mono?' · mono':''}</span><div class="jc"><span class="lab">teacher</span> ${i.jc?i.jc.map((t,k)=>`<span class="${i.jm&&i.jm[k]?'hit':'miss'}">${esc(t)}</span>`).join(', '):'<span class="m">not labelled yet</span>'}</div><div class="st"><span class="lab">student${i.split?' · '+(i.split==='held'?'held-out':'trained on'):''}</span> ${i.st&&i.st.length?i.st.map((t,k)=>`<span class="${i.sm?(i.sm[k]?'hit':'miss'):''}" title="${t[1]}">${esc(t[0])}</span>`).join(', '):'<span class="m">none</span>'}</div></div></a>`;
+const run=()=>{
+  const q=$('q').value.toLowerCase(),s=$('src').value,h=$('hue').value,m=$('mono').value,l=$('lab').value,sp=$('split').value,so=$('sort').value;
+  list=all.filter(i=>(!s||i.src===s)&&(!h||i.hue===h)&&(m===''||String(+!!i.mono)===m)&&(l===''||String(+!!i.jc)===l)&&(sp===''||(sp==='none'?!i.jc:i.split===sp))&&(!q||(i.t+' '+i.c+' '+i.tags.join(' ')+' '+(i.jc||[]).join(' ')).toLowerCase().includes(q)));
+  if(so)list=[...list].sort((a,b)=>(b[so]??-9)-(a[so]??-9));
+  $('g').innerHTML='';shown=0;more();$('n').textContent=`${list.length} of ${all.length}`;
+};
+const more=()=>{$('g').insertAdjacentHTML('beforeend',list.slice(shown,shown+PAGE).map(card).join(''));shown+=PAGE;$('more').hidden=shown>=list.length};
+fetch('data.json').then(r=>r.json()).then(d=>{all=d;fill($('src'),[...new Set(d.map(i=>i.src))].sort());fill($('hue'),[...new Set(d.map(i=>i.hue).filter(Boolean))].sort());run()});
+['q','src','hue','mono','lab','split','sort'].forEach(id=>$(id).addEventListener('input',run));
+$('more').onclick=more;
+</script>

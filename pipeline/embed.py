@@ -1,31 +1,35 @@
-"""Stand-in embeddings: signed feature hashing into 64 dims, int8.
-Cosine similarity tracks shared tags, room and type. Swap for CLIP/SigLIP/text embeddings later;
-the pack format and the client do not change (dim and model are in the manifest)."""
-import hashlib, math
+"""Embeddings: SigLIP 2 vectors reduced to 64 numbers (PCA, int8), one space for pictures and text.
+Stored vectors come from features/switch_embedding.py. A work added later is embedded here from its text
+(title, creator, tags) through the SigLIP text tower; run the pipeline with experiments/.venv/bin/python for that.
+Re-run embed_rest and switch_embedding to give new pictures their image vectors."""
+from functools import lru_cache
+from pathlib import Path
 
 DIM = 64
-MODEL = "feature-hash-64-v1"
+MODEL = "siglip2-pca-64-v1"
+SIGLIP = "google/siglip2-base-patch16-224"
+PCA = Path(__file__).parent / "siglip_pca64.npz"
 
-def feature_vec(feature):
-    raw = hashlib.sha256(feature.encode()).digest() + hashlib.sha256(b"2" + feature.encode()).digest()
-    return [(b - 127.5) / 73.6 for b in raw[:DIM]]  # roughly unit variance
+@lru_cache(maxsize=1)
+def _tower():
+    import numpy as np
+    from transformers import AutoModel, AutoProcessor
+    pca = np.load(PCA)
+    return AutoModel.from_pretrained(SIGLIP).eval(), AutoProcessor.from_pretrained(SIGLIP), pca["mean"], pca["components"]
 
-def unit(v):
-    n = math.sqrt(sum(x * x for x in v)) or 1.0
-    return [x / n for x in v]
-
-def features(card):
+def text_of(card):
     ed = card["editorial"]
-    out = {f"r:{ed['room']}": 1.5, f"k:{card['type']}": 0.5}
-    out.update({f"t:{t}": 1.0 for t in ed["tags"]})
-    return out
+    return f"{card['title']}, {card['creator']}. " + ", ".join(t.replace("-", " ") for t in ed["tags"][:12])
 
 def embed(card):
-    acc = [0.0] * DIM
-    for f, w in features(card).items():
-        for i, x in enumerate(feature_vec(f)):
-            acc[i] += w * x
-    return bytes((round(x * 127) & 0xFF) for x in unit(acc))  # int8 as unsigned bytes
+    import numpy as np
+    import torch
+    model, proc, mean, comp = _tower()
+    with torch.no_grad():
+        x = proc(text=[text_of(card)], padding="max_length", max_length=64, truncation=True, return_tensors="pt")
+        v = torch.nn.functional.normalize(model.get_text_features(**x), dim=-1).numpy()[0]
+    p = (v - mean) @ comp.T
+    return bytes(np.round(p / (np.linalg.norm(p) + 1e-9) * 127).astype(np.int8).tobytes())
 
 def to_int8(blob):
     return [b - 256 if b > 127 else b for b in blob]

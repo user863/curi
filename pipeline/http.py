@@ -7,6 +7,7 @@ UA = "commonplace-pipeline/0.1 (research prototype)"
 BROWSER_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 _lock = threading.Lock()
 _next = {}  # host -> earliest time of the next request
+HEAD_GAP = 0.05  # seconds between probes to one host (0.1 before; raise again if a host starts refusing)
 _host_min = 0.0  # long jobs: at least this many seconds between requests to one host
 _gap = 0.0  # long jobs: at least this many seconds between any two requests
 _gap_lock = threading.Lock()
@@ -107,7 +108,7 @@ def get_head(url, nbytes=2048, ua=UA):
     meta = CACHE / (hashlib.sha1(f"{url}#head{'' if ua == UA else '#' + ua}".encode()).hexdigest() + ".meta")
     if meta.exists():
         return json.loads(meta.read_text())
-    _wait(url, 0.1)
+    _wait(url, HEAD_GAP)
     req = urllib.request.Request(url, headers={"User-Agent": ua, "Range": f"bytes=0-{nbytes - 1}"})
     with urllib.request.urlopen(req, timeout=40) as r:
         r.read(nbytes)

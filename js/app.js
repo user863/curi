@@ -1,5 +1,5 @@
 import { loadCatalog } from './catalog.js';
-import { load, save as persist, hasBit, withBit } from './store.js';
+import { load, save as persist, hasBit, withBit, migration } from './store.js';
 import { scoreAll, matchAll, shares, learn, withRoom, forgetInterest, emptyProfile, explain, age } from './rank.js';
 import { SET, planFor, nextSlot, pickFor } from './session.js';
 import * as V from './views.js';
@@ -10,7 +10,7 @@ import { createSearchView, createSavedView } from './search-view.js';
 
 const AHEAD = 2; // cards rendered ahead of the active one
 const RETAIN = 4; // cards kept rendered behind it; older ones are released so a long scroll stays light
-const ONBOARDING = false; // true: ask which rooms to start from. Off: the feed starts from an even mix
+const ONBOARDING = true; // true: ask which rooms to start from. Off: the feed starts from an even mix
 const TAP_MS = 260;
 const DWELL_MIN_S = 3;
 const SKIP_S = 1.2; // scrolled past before this: a weak no
@@ -73,7 +73,7 @@ const categoryIds = () => catalog.categories.map((c) => c.id);
 let scoreCache = { key: '', scores: null, match: null };
 const scoresNow = () => {
   const key = `${state.profile.ver}:${catalog.version}`; // interests changed, or more works loaded
-  if (scoreCache.key !== key) scoreCache = { key, scores: scoreAll(catalog, state.profile), match: null };
+  if (scoreCache.key !== key) scoreCache = { key, scores: scoreAll(catalog, state.profile, Math.random), match: null };
   return scoreCache.scores;
 };
 const matchNow = () => {
@@ -1096,7 +1096,7 @@ document.addEventListener('visibilitychange', () => {
     emit('hide');
     Log?.write(localStorage, events);
     feed.querySelectorAll('video, audio').forEach((m) => m.pause());
-    if (speech?.state() === 'playing') speech.toggle();
+    if (speech?.active() && speech.state() !== 'paused') speech.toggle();
   } else if (active) syncMedia(active);
   activeSince = performance.now();
 });
@@ -1340,6 +1340,8 @@ $('.bar').addEventListener('pointerup', () => { if (app.classList.contains('ui')
 const init = async () => {
   emit('start');
   catalog = await loadCatalog();
+  const moved = await migration(state, catalog);
+  if (moved) update(moved);
   update({ profile: age(state.profile, Math.round(Date.now() / 1000)) }); // time passed since the last session
   app.dataset.nav = state.nav;
   app.classList.toggle('cc', Captions.available);

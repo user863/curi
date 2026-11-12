@@ -8,7 +8,7 @@ from pipeline import db, embed, export, quality
 N, OUT, DBP = int(sys.argv[1]), sys.argv[2], sys.argv[3]
 rng = random.Random(11)
 TYPES = [("image", 0.4), ("passage", 0.25), ("video", 0.2), ("audio", 0.15)]
-ROOMS = ["open-air", "faces", "interiors", "line", "deep-time", "words", "film", "sound"]
+ROOMS = ["landscapes", "people", "interiors", "drawings", "deep-time", "words", "film", "sound"]
 vocab = [f"tag{i}" for i in range(1500)]
 topics = [rng.sample(vocab, 6) for _ in range(300)]
 if Path(DBP).exists():

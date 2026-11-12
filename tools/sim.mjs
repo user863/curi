@@ -3,6 +3,7 @@
 // A reader has hidden tastes and reacts to each card by a fixed rule, so two rankers face the same readers.
 // The feed loop below mirrors js/app.js (two cards ranked ahead, re-ranked after a verdict); keep them in step.
 import { writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { loadCatalog } from '../js/catalog.js';
 import { emptyProfile, learn, scoreAll, matchAll, shares } from '../js/rank.js';
 import { SET, planFor, nextSlot, pickFor } from '../js/session.js';
@@ -35,7 +36,7 @@ const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const args = (argv) => Object.fromEntries(argv.reduce((out, a, i) => (a.startsWith('--') ? [...out, [a.slice(2), argv[i + 1]]] : out), []));
 
 // Cosine to a liked centroid counts from the catalogue's median up to its 99th percentile.
-const tasteRamp = ({ cos }) => {
+export const tasteRamp = ({ cos }) => {
   const step = Math.max(1, Math.floor(cos.length / ORACLE_SAMPLE));
   const sample = Float32Array.from({ length: Math.floor(cos.length / step) }, (_, i) => cos[i * step]).sort();
   const lo = sample[Math.floor(sample.length * 0.5)];
@@ -43,7 +44,7 @@ const tasteRamp = ({ cos }) => {
   return (c) => clamp01((c - lo) / (hi - lo));
 };
 
-const makeReader = (world, seed) => {
+export const makeReader = (world, seed) => {
   const rng = mulberry(seed);
   const { counts } = world.index.info;
   const draw = (sizes) => { // a cluster, by its number of works
@@ -67,7 +68,7 @@ const makeReader = (world, seed) => {
   };
 };
 
-const judge = (world, ramp, reader, p) => {
+export const judge = (world, ramp, reader, p) => {
   const row = p * world.k;
   const taste = Math.max(...reader.liked.map((j) => ramp(world.cos[row + j])));
   const dislike = ramp(world.cos[row + reader.disliked]);
@@ -211,4 +212,4 @@ const main = async () => {
   if (opt.out) await writeFile(opt.out, `${JSON.stringify(result, null, 1)}\n`);
 };
 
-await main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) await main();

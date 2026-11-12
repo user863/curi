@@ -1,2 +1,4 @@
-{"open-air": "Landscapes", "faces": "People", "interiors": "Interiors",
- "deep-time": "History", "words": "Text", "film": "Film", "sound": "Sound"}
+{"paintings": "Paintings", "drawings": "Drawings & prints", "people": "People", "landscapes": "Landscapes",
+ "cities": "Cities & architecture", "wildlife": "Wildlife & nature", "objects": "Sculpture & objects",
+ "manuscripts": "Maps & manuscripts", "interiors": "Interiors", "deep-time": "Antiquity",
+ "words": "Text", "film": "Film", "sound": "Sound"}

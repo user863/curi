@@ -2,11 +2,21 @@ name: Commonplace
 options:
   bundleIdPrefix: com.johannbraun
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "18.0"
 settings:
   base:
     DEVELOPMENT_TEAM: TLM2CHJBJF
     SWIFT_VERSION: "5.0"
+packages:
+  KokoroSwift:
+    url: https://github.com/mlalma/kokoro-ios
+    from: 1.0.10
+  MLXUtilsLibrary:
+    url: https://github.com/mlalma/MLXUtilsLibrary.git
+    exactVersion: 0.0.6
+  MLXSwift:
+    url: https://github.com/ml-explore/mlx-swift
+    from: 0.29.1
 targets:
   Commonplace:
     type: application
@@ -23,6 +33,19 @@ targets:
         type: folder
       - path: ../fonts
         type: folder
+      - path: Kokoro/kokoro-v1_0.safetensors
+        buildPhase: resources
+      - path: Kokoro/voices.npz
+        buildPhase: resources
+    dependencies:
+      - package: KokoroSwift
+        product: KokoroSwift
+        embed: true
+        codeSign: true
+      - package: MLXUtilsLibrary
+        product: MLXUtilsLibrary
+      - package: MLXSwift
+        product: MLX
     info:
       path: Commonplace/Info.plist
       properties:

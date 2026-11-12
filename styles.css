@@ -331,6 +331,7 @@ video.art { background: #000; }
 .app.ui .speak { opacity: 0; pointer-events: none; }
 @keyframes speaking { 50% { opacity: 0.35; } }
 .speak[aria-pressed='true'] svg path:last-child { animation: speaking 1.1s ease-in-out infinite; }
+.card[data-speech='loading'] .speak svg { animation: speaking 0.8s ease-in-out infinite; } /* the model is starting */
 .card[data-speech='paused'] .speak { color: var(--dim); }
 .card[data-speech='paused'] .speak svg path:last-child { animation: none; opacity: 0.35; }
 

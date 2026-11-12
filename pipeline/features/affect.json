@@ -1,0 +1,145 @@
+{
+ "terms": {
+  "calm": {
+   "threshold": 1.6,
+   "calibrated": true,
+   "publish": true,
+   "support": 805,
+   "precision": 0.336,
+   "recall": 0.507,
+   "auc": 0.897
+  },
+  "dramatic": {
+   "threshold": 2.1,
+   "calibrated": true,
+   "publish": true,
+   "support": 161,
+   "precision": 0.185,
+   "recall": 0.363,
+   "auc": 0.917
+  },
+  "melancholy": {
+   "threshold": 2.5,
+   "calibrated": false,
+   "publish": false,
+   "support": 7
+  },
+  "joyful": {
+   "threshold": 2.5,
+   "calibrated": false,
+   "publish": false,
+   "support": 32
+  },
+  "mysterious": {
+   "threshold": 2.5,
+   "calibrated": false,
+   "publish": false,
+   "support": 20
+  },
+  "tender": {
+   "threshold": 2.6,
+   "calibrated": true,
+   "publish": false,
+   "support": 52,
+   "precision": 0.035,
+   "recall": 0.115,
+   "auc": 0.809
+  },
+  "serene": {
+   "threshold": 1.9,
+   "calibrated": true,
+   "publish": false,
+   "support": 826,
+   "precision": 0.31,
+   "recall": 0.25,
+   "auc": 0.838
+  },
+  "ornate": {
+   "threshold": 1.4,
+   "calibrated": true,
+   "publish": true,
+   "support": 1267,
+   "precision": 0.406,
+   "recall": 0.564,
+   "auc": 0.892
+  },
+  "minimal": {
+   "threshold": 1.1,
+   "calibrated": true,
+   "publish": false,
+   "support": 630,
+   "precision": 0.116,
+   "recall": 0.378,
+   "auc": 0.748
+  },
+  "chaotic": {
+   "threshold": 2.5,
+   "calibrated": false,
+   "publish": false,
+   "support": 29
+  },
+  "sombre": {
+   "threshold": 2.5,
+   "calibrated": true,
+   "publish": false,
+   "support": 109,
+   "precision": 0.072,
+   "recall": 0.098,
+   "auc": 0.776
+  },
+  "playful": {
+   "threshold": 2.5,
+   "calibrated": false,
+   "publish": false,
+   "support": 12
+  },
+  "solemn": {
+   "threshold": 0.6,
+   "calibrated": true,
+   "publish": false,
+   "support": 1588,
+   "precision": 0.216,
+   "recall": 0.678,
+   "auc": 0.805
+  },
+  "dreamlike": {
+   "threshold": 2.5,
+   "calibrated": false,
+   "publish": false,
+   "support": 1
+  }
+ },
+ "axes": {
+  "valence": {
+   "high": [
+    "joyful",
+    "tender",
+    "serene",
+    "playful"
+   ],
+   "low": [
+    "melancholy",
+    "sombre",
+    "mysterious"
+   ],
+   "holdoutAuc": 0.769,
+   "holdoutN": 1031
+  },
+  "energy": {
+   "high": [
+    "dramatic",
+    "chaotic",
+    "playful"
+   ],
+   "low": [
+    "calm",
+    "serene",
+    "solemn",
+    "minimal",
+    "dreamlike"
+   ],
+   "holdoutAuc": 0.885,
+   "holdoutN": 705
+  }
+ }
+}

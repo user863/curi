@@ -26,13 +26,20 @@ const parseShard = (buf, dim) => {
   const creator = new Uint16Array(buf, o, n);
   o += 2 * n;
   o += (4 - (o % 4)) % 4;
-  return { n, ids, cat, room, quality, source, creator, emb: new Int8Array(buf, o, n * dim) };
+  const emb = new Int8Array(buf, o, n * dim);
+  const at = o + n * dim;
+  const flags = buf.byteLength >= at + n ? new Uint8Array(buf, at, n) : new Uint8Array(n); // bit 0: monochrome; older packs have no column
+  const cols = at + n; // then valence and energy (1..255, 0 unknown); older packs end before them
+  const has = buf.byteLength >= cols + 2 * n;
+  const valence = has ? new Uint8Array(buf, cols, n) : new Uint8Array(n);
+  const energy = has ? new Uint8Array(buf, cols + n, n) : new Uint8Array(n);
+  return { n, ids, cat, room, quality, source, creator, emb, flags, valence, energy };
 };
 
-export const loadCatalog = async (base = 'data/pack') => {
+export const loadCatalog = async (base = 'data/pack', fetcher = fetch) => {
   const stats = { bytes: 0, requests: 0 };
   const get = async (url, as) => {
-    const res = await fetch(url);
+    const res = await fetcher(url);
     stats.requests += 1;
     if (as === 'json') {
       const text = await res.text();
@@ -62,7 +69,7 @@ export const loadCatalog = async (base = 'data/pack') => {
   const view = {
     manifest, dim, categories: manifest.categories, rooms: manifest.rooms, blocked, stats, info,
     n: 0, version: 0, ids: new Uint32Array(0), cat: new Uint8Array(0), room: new Uint8Array(0),
-    quality: new Uint8Array(0), source: new Uint8Array(0), creator: new Uint16Array(0), emb: new Int8Array(0),
+    quality: new Uint8Array(0), source: new Uint8Array(0), creator: new Uint16Array(0), emb: new Int8Array(0), flags: new Uint8Array(0), valence: new Uint8Array(0), energy: new Uint8Array(0),
   };
   const loaded = new Map(); // cluster id -> shard
   const inflight = new Map();
@@ -80,6 +87,9 @@ export const loadCatalog = async (base = 'data/pack') => {
     view.source = concat(Uint8Array, parts.map(([, p]) => p.source), total);
     view.creator = concat(Uint16Array, parts.map(([, p]) => p.creator), total);
     view.emb = concat(Int8Array, parts.map(([, p]) => p.emb), total * dim);
+    view.flags = concat(Uint8Array, parts.map(([, p]) => p.flags), total);
+    view.valence = concat(Uint8Array, parts.map(([, p]) => p.valence), total);
+    view.energy = concat(Uint8Array, parts.map(([, p]) => p.energy), total);
     pos = new Map();
     owner = new Map();
     parts.forEach(([c, p]) => p.ids.forEach((id) => owner.set(id, c)));
@@ -99,6 +109,10 @@ export const loadCatalog = async (base = 'data/pack') => {
   };
 
   let tagsOnce = null;
+  let galleriesOnce = null;
+  let coloursOnce = null;
+  let vocabOnce = null;
+  let suggestOnce = null;
   const searchShards = new Map();
   const shards = new Map();
   const shard = (dir, c) => {
@@ -129,6 +143,31 @@ export const loadCatalog = async (base = 'data/pack') => {
       if (!hash) return Promise.resolve({});
       if (!searchShards.has(key)) searchShards.set(key, get(`${base}/search/${key}.${hash}.json`, 'json'));
       return searchShards.get(key);
+    },
+
+    // Cluster of every work by id (Uint16Array, 0xFFFF for none): finds saved works again after a re-cluster.
+    owners: async () => new Uint16Array(await get(`${base}/${manifest.owners}`)),
+
+    // Europeana galleries for hero cards: [{ t title, s slug, c cover url, q quality, v vector, ids }]; [] in packs without them.
+    // Tag labels: { slug: { de } }; {} in packs without them.
+    vocab: () => {
+      vocabOnce ??= manifest.vocab ? get(`${base}/${manifest.vocab}`, 'json') : Promise.resolve({});
+      return vocabOnce;
+    },
+    // Colour buckets: { name: { cluster: [ids] } }; {} in packs without them.
+    colours: () => {
+      coloursOnce ??= manifest.colours ? get(`${base}/${manifest.colours}`, 'json') : Promise.resolve({});
+      return coloursOnce;
+    },
+    galleries: () => {
+      galleriesOnce ??= manifest.galleries ? get(`${base}/${manifest.galleries}`, 'json') : Promise.resolve([]);
+      return galleriesOnce;
+    },
+
+    // Tags to complete in the search bar: [[slug, works]], most used first.
+    suggest: () => {
+      suggestOnce ??= manifest.suggest ? get(`${base}/${manifest.suggest}`, 'json') : Promise.resolve([]);
+      return suggestOnce;
     },
 
     // Tag vocabulary and postings (tag -> { cluster: [ids] }), fetched once when the filter is first used.
