@@ -33,8 +33,17 @@
     if (f.hue && p.hue !== f.hue) return false;
     if (f.mono !== '' && f.mono != null && String(+!!p.mono) !== f.mono) return false;
     if (f.labelled && !p.jc) return false;
+    if (f.quality && !qualityOk(p, f.quality)) return false;
     if (f.q && !p.text.includes(f.q.toLowerCase())) return false;
     return true;
+  };
+  // Quality filter over the pictures in the map: thresholds on the raw score r (source score minus penalties).
+  let rawSorted = [];
+  const qualityOk = (p, mode) => {
+    if (!p.qm) return false;
+    if (mode === 'pen') return Object.keys(p.qm.why).length > 0;
+    const cut = mode === 'n100' ? rawSorted[Math.min(99, rawSorted.length - 1)] : rawSorted[Math.floor(rawSorted.length * (mode === 'p5' ? 0.05 : 0.2))];
+    return p.qm.r <= cut;
   };
   const refilter = () => {
     vis = pts.filter(matches);
@@ -148,7 +157,7 @@
     if (t !== hover) { hover = t; schedule(); }
     const tip = $('#tip');
     if (t) {
-      tip.textContent = `${t.p.t || 'untitled'} · ${t.p.src}`;
+      tip.textContent = `${t.p.t || 'untitled'} · ${t.p.src}${t.p.qm ? ` · quality ${t.p.qm.q} (raw ${t.p.qm.r})` : ''}`;
       tip.style.display = 'block'; tip.style.left = `${e.clientX + 14}px`; tip.style.top = `${e.clientY + 14}px`;
     } else tip.style.display = 'none';
   });
@@ -171,6 +180,8 @@
     const side = `<div class="side"><h2>${esc(p.t) || 'untitled'}</h2><div class="m">${esc(p.c)} ${esc(p.dt)}</div>
       <div class="m">${esc(p.inst)}</div><div class="pal">${p.pal.map((c) => `<i style="background:${c[0]};flex:${c[1]}"></i>`).join('')}</div>
       <div class="m">${esc(p.hue ?? '')}${p.mono ? ' · monochrome' : ''} · L ${p.L} · chroma ${p.ch}</div>
+      ${p.qm ? `<p class="m">quality ${p.qm.q} · raw score ${p.qm.r}${p.qm.ls ? ` · ${p.qm.ls}px long side · ${p.qm.bpp} bits/px · sharpness ${p.qm.sh}` : ' · no file statistics yet'}</p>
+        <p class="tags why">${Object.entries(p.qm.why).map(([k, v]) => `<span>${esc(k)} -${v}</span>`).join('') || '<span>no penalties</span>'}</p>` : ''}
       ${p.jc ? `<p class="m">teacher</p><p class="tags">${p.jc.map((x) => `<span>${esc(x)}</span>`).join('')}</p>` : '<p class="m">not labelled yet</p>'}
       ${p.st && p.st.length ? `<p class="m">student${p.split ? ` (${p.split === 'held' ? 'held-out' : 'trained on'})` : ''}</p><p class="tags">${p.st.map((x) => `<span>${esc(x[0])}</span>`).join('')}</p>` : ''}
       <p class="m">${esc((p.tags || []).join(', '))}</p>${p.url ? `<p><a href="${esc(p.url)}" target="_blank" rel="noopener">Source</a></p>` : ''}</div>`;
@@ -208,13 +219,13 @@
   };
 
   Promise.all([fetch('train/report/data.json').then((r) => r.json()), fetch('train/explore/layout.json').then((r) => r.json()),
-    fetch('train/explore/layout_tags.json').then((r) => r.json())]).then(([items, colourRows, tagRows]) => {
+    fetch('train/explore/layout_tags.json').then((r) => r.json()), fetch('train/report/quality.json').then((r) => r.json())]).then(([items, colourRows, tagRows, quality]) => {
     const by = new Map(items.map((i) => [i.u, i]));
     const tags = new Map(tagRows.map((r) => [r.u, r]));
     const order = colourRows.map((_, i) => i).sort(() => Math.random() - 0.5);
     pts = colourRows.flatMap((l, i) => {
       const it = by.get(l.u), t = tags.get(l.u);
-      return it && t ? [{ ...it, x: l.x, y: l.y, to: { colour: [l.x, l.y], tags: [t.x, t.y] }, rank: order[i], hex: it.pal[0]?.[0] ?? '#888',
+      return it && t ? [{ ...it, qm: quality[l.u], x: l.x, y: l.y, to: { colour: [l.x, l.y], tags: [t.x, t.y] }, rank: order[i], hex: it.pal[0]?.[0] ?? '#888',
         text: `${it.t} ${it.c} ${(it.tags || []).join(' ')} ${(it.jc || []).join(' ')} ${(it.st || []).map((x) => x[0]).join(' ')}`.toLowerCase() }] : [];
     });
     ['colour', 'tags'].forEach((name) => { // spread each layout on its own so neither overlaps
@@ -223,8 +234,36 @@
       pts.forEach((p, i) => { p.to[name] = [set[i].x, set[i].y]; });
     });
     pts.forEach((p) => { [p.x, p.y] = p.to.colour; });
+    rawSorted = pts.filter((p) => p.qm).map((p) => p.qm.r).sort((a, b) => a - b);
     refilter();
   });
+
+  // Quality metrics: reasons, distribution, weakest sources and the lowest-scored works of the whole catalogue.
+  const qpanel = $('#qpanel');
+  const thumbOf = (x) => (x.local ? `train/report/thumbs/${esc(x.uid)}.jpg` : esc(x.url ?? ''));
+  const renderQuality = (m) => {
+    const max = Math.max(...m.histogram, 1);
+    const hist = (h) => `<div class="hist">${h.map((n, i) => `<i style="height:${Math.max(1, (80 * n) / Math.max(...h, 1))}px" title="${(m.bins.from + (i * (m.bins.to - m.bins.from)) / m.bins.n).toFixed(2)}: ${n}"></i>`).join('')}</div>`;
+    const rows = (o) => Object.entries(o).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v}</td></tr>`).join('');
+    qpanel.innerHTML = `<div class="m">${m.works} works · file statistics for ${m.withStats} · colour for ${m.withColour}</div>
+      <div class="cols">
+        <div><h2>Penalties (works affected)</h2><table>${rows(m.reasons)}</table></div>
+        <div><h2>Raw score, all works (${m.bins.from} to ${m.bins.to})</h2>${hist(m.histogram)}</div>
+        ${Object.entries(m.histogramByType).map(([t, h]) => `<div><h2>${esc(t)}</h2>${hist(h)}</div>`).join('')}
+        <div><h2>Lowest sources, mean raw score</h2><table>${m.sources.map((s) => `<tr><td>${esc(s.source)}</td><td class="num">${s.works}</td><td class="num">${s.meanRaw}</td><td class="num">${Math.round(s.penalised * 100)}% penalised</td></tr>`).join('')}</table></div>
+      </div>
+      <h2>Lowest ${m.lowest.length} works</h2>
+      <div class="grid">${m.lowest.map((x) => `<div class="card"><img loading="lazy" alt="" src="${thumbOf(x)}">
+        <div><b>${esc((x.t || 'untitled').slice(0, 60))}</b><br>${esc(x.inst)} · ${esc(x.type)}<br>raw ${x.r} · rank ${x.q}${x.ls ? `<br>${x.ls}px · ${x.bpp} bpp · sharp ${x.sh}` : ''}
+        <div class="why">${Object.keys(x.why).map((k) => `<span>${esc(k)}</span>`).join('')}</div></div></div>`).join('')}</div>`;
+  };
+  let summary = null;
+  $('#qbtn').addEventListener('click', async () => {
+    qpanel.hidden = !qpanel.hidden;
+    qpanel.style.top = `${$('#bar').offsetHeight}px`;
+    if (!qpanel.hidden && !summary) { summary = await fetch('train/report/quality_summary.json').then((r) => r.json()); renderQuality(summary); }
+  });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') qpanel.hidden = true; });
 
   const register = () => {
     if (!window.Shiny?.addCustomMessageHandler) return setTimeout(register, 50);

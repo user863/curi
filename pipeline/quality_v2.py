@@ -12,32 +12,42 @@ BLANK_LIGHTNESS = (0.07, 0.93)          # mean lightness outside this: nearly bl
 SMALL_SIDE, TINY_SIDE = 800, 480        # long side in pixels: small, and thumbnail-sized
 PENALTY_SMALL, PENALTY_TINY = 0.08, 0.2
 SQUEEZED_BPP, PENALTY_SQUEEZED = 0.35, 0.1   # bits per pixel below this: over-compressed, blocky
+LARGE_SIDE = 2000                       # from this size the 256 px sharpness and the bytes per pixel say little: sparse line art and pale sketches score low on both
+SOFT_SHARP = 150.0                      # detail below this (about the softest 8%) or a small file: a flat or blank look is then a weak scan, not a style
 BLURRED, PENALTY_BLURRED = 80.0, 0.15        # Laplacian variance below this (about the blurriest 2%): out of focus or smeared
+
+def penalties(tags, colour, stats=None):
+    """{reason: amount} for the weaknesses of one work. Document, flat and blank only count when the file is also weak
+    (soft or small, and below LARGE_SIDE): a studio photo on white, or crisp line art, looks flat or blank and is not a poor picture.
+    Without statistics they are not judged."""
+    out = {}
+    if stats:
+        judged = stats["longSide"] < LARGE_SIDE  # detail is judged on files below LARGE_SIDE; larger ones are not blamed for it
+        weak = judged and (stats["sharp"] < SOFT_SHARP or stats["longSide"] < SMALL_SIDE)
+        if weak and DOCUMENT_TAGS & set(tags):
+            out["document"] = PENALTY_DOCUMENT
+        if weak and colour:
+            if colour["contrast"] < FLAT_CONTRAST:
+                out["flat"] = PENALTY_FLAT
+            if not BLANK_LIGHTNESS[0] <= colour["lightness"] <= BLANK_LIGHTNESS[1]:
+                out["blank"] = PENALTY_BLANK
+        if stats["longSide"] < TINY_SIDE:
+            out["tiny"] = PENALTY_TINY
+        elif stats["longSide"] < SMALL_SIDE:
+            out["small"] = PENALTY_SMALL
+        if judged and stats["bytesPerPixel"] < SQUEEZED_BPP:
+            out["squeezed"] = PENALTY_SQUEEZED
+        if judged and stats["sharp"] < BLURRED:
+            out["blurred"] = PENALTY_BLURRED
+    return out
 
 def technical(stats):
     """Penalty for the weaknesses of the file itself; 0 without statistics."""
-    if not stats:
-        return 0.0
-    p = PENALTY_TINY if stats["longSide"] < TINY_SIDE else PENALTY_SMALL if stats["longSide"] < SMALL_SIDE else 0.0
-    if stats["bytesPerPixel"] < SQUEEZED_BPP:
-        p += PENALTY_SQUEEZED
-    if stats["sharp"] < BLURRED:
-        p += PENALTY_BLURRED
-    return p
+    return sum(v for k, v in penalties((), None, stats).items())
 
 def refined(base, tags, colour, stats=None):
     """base: source score 0..1; tags: slugs; colour: palette features or None; stats: imagestats features or None."""
-    s = base - technical(stats)
-    if FEATURED in tags:
-        s += BONUS_FEATURED
-    if DOCUMENT_TAGS & set(tags):
-        s -= PENALTY_DOCUMENT
-    if colour:
-        if colour["contrast"] < FLAT_CONTRAST:
-            s -= PENALTY_FLAT
-        if not BLANK_LIGHTNESS[0] <= colour["lightness"] <= BLANK_LIGHTNESS[1]:
-            s -= PENALTY_BLANK
-    return s
+    return base + (BONUS_FEATURED if FEATURED in tags else 0.0) - sum(penalties(tags, colour, stats).values())
 
 def rescore(works, tags, colour, stats=None):
     """works: [{id, source, type, quality}]; returns {id: quality in 1.0..1.4}. Ties share their mean rank."""

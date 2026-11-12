@@ -12,18 +12,25 @@ class Rescore(unittest.TestCase):
 
     def test_signals(self):
         w = [{"id": 1, "source": "a", "type": "image", "quality": 1.3}, {"id": 2, "source": "a", "type": "image", "quality": 1.3}]
-        out = q.rescore(w, {1: ["featured-picture"], 2: ["document"]}, {})
+        soft = {"longSide": 1500, "bytesPerPixel": 1.5, "sharp": 100}   # weak enough for the document and flat penalties
+        out = q.rescore(w, {1: ["featured-picture"], 2: ["document"]}, {}, {1: soft, 2: soft})
         self.assertGreater(out[1], out[2])
         flat = {"contrast": 0.1, "lightness": 0.5}
-        out = q.rescore(w, {}, {2: flat})
+        out = q.rescore(w, {}, {2: flat}, {1: soft, 2: soft})
         self.assertGreater(out[1], out[2])
+
+    def test_crisp_files_are_not_judged_flat_blank_or_document(self):
+        crisp = {"longSide": 1500, "bytesPerPixel": 1.5, "sharp": 600}  # studio photo on white, line art
+        self.assertEqual(q.penalties(["document"], {"contrast": 0.1, "lightness": 0.97}, crisp), {})
+        self.assertEqual(q.penalties(["document"], {"contrast": 0.1, "lightness": 0.97}, None), {})
+        self.assertEqual(set(q.penalties(["document"], {"contrast": 0.1, "lightness": 0.97}, {**crisp, "sharp": 100})), {"document", "flat", "blank"})
 
 if __name__ == "__main__":
     unittest.main()
 
 class Technical(unittest.TestCase):
     def test_weak_files_lose_rank_and_missing_statistics_change_nothing(self):
-        good = {"longSide": 2000, "bytesPerPixel": 1.5, "sharp": 400}
+        good = {"longSide": 1500, "bytesPerPixel": 1.5, "sharp": 400}
         weak = {"longSide": 300, "bytesPerPixel": 0.2, "sharp": 3}
         self.assertEqual(q.technical(None), 0)
         self.assertEqual(q.technical(good), 0)

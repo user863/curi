@@ -1,6 +1,6 @@
 """The Met Open Access: highlights per department, public domain with an image."""
 import datetime, urllib.parse
-from .. import quality, rights, state, taxonomy
+from .. import probe, quality, rights, state, taxonomy
 from ..http import get_json
 from .common import reject, stable_pick
 
@@ -41,6 +41,11 @@ def score(obj, tags):
         (0.1, 1.0 if obj.get("primaryImageSmall") else 0.0),
     ])
 
+def best_image(obj):
+    """The original when it is a phone-sized download (probe.image_ok), else the web-large copy."""
+    original = obj.get("primaryImage")
+    return original if original and probe.image_ok(original) == "yes" else obj["primaryImageSmall"]
+
 def card(obj, tags, today):
     begin = obj.get("objectBeginDate") or 0
     tag_list = [taxonomy.slug(t) for t in tags][:5]
@@ -52,7 +57,7 @@ def card(obj, tags, today):
                    "sourceId": str(obj["objectID"]), "fetchedAt": today},
         "rights": rights.rights("CC0", "worldwide", "The Metropolitan Museum of Art (CC0)", "image",
                                 creditLine=obj["creditLine"]),
-        "media": {"kind": "image", "url": obj["primaryImageSmall"], "medium": obj["medium"],
+        "media": {"kind": "image", "url": best_image(obj), "medium": obj["medium"],
                   "dimensions": obj["dimensions"], "culture": obj["culture"]},
         "editorial": {"note": f"{obj['medium']}. {obj['department']}.".replace("..", "."), "noteSource": "source",
                       "room": room_of(obj, tags), "tags": tag_list + extra,

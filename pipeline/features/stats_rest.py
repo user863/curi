@@ -1,7 +1,7 @@
 """Technical image statistics (pipeline/imagestats.py) for every published image that has none yet, fetched on the fly.
     experiments/.venv/bin/python -m pipeline.features.stats_rest [--out experiments/stats] [--catalog experiments/catalog]
 Writes <out>/chunk_XXXX.stats.json {uid: stats}; uids already in a chunk there or in <catalog> are skipped.
-Fetches are spaced per host as in embed_rest.py. Then: python3 -m pipeline.apply_stats"""
+Fetches are spaced per host as in embed_rest.py. With --uids FILE it measures only those uids again. Then: python3 -m pipeline.apply_stats"""
 import argparse, collections, io, itertools, json, random, sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -62,9 +62,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="experiments/stats")
     ap.add_argument("--catalog", default="experiments/catalog")
+    ap.add_argument("--uids", help="JSON list of uids to measure again (their address changed), in chunk files named chunk_r*")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    if args.uids:
+        again = set(json.loads(Path(args.uids).read_text()))
+        todo = [x for x in pending(set()) if x[0] in again]
+        print(f"{len(todo)} to measure again", flush=True)
+        crawl(todo, THREADS, "r", out)
+        print("done", flush=True)
+        return
     todo = pending(known(out, args.catalog))
     random.Random(0).shuffle(todo)
     # a host that is fetched slowly must not hold up the others: its own stream

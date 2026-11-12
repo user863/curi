@@ -2,7 +2,7 @@
 Usage (from the project root): python3 -m pipeline.run [--only met,gutenberg,prelinger-film,...]"""
 import argparse, collections, json
 from pathlib import Path
-from . import db, embed, export, quality, secrets, state
+from . import db, embed, export, quality, rights, secrets, state
 from .sources import archive, citizen_dj, cleveland, europeana, europeana_bulk, europeana_galleries, gutenberg, met, openverse, texts
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -68,7 +68,7 @@ def main():
             report[name] = {"error": secrets.redact(repr(e))}
             print(f"{name}: FAILED {secrets.redact(repr(e))}", flush=True)
             continue
-        gated = [x for x in cands if x["rights"]["gate"] == "yes"]  # safety net: no adapter may bypass the gate
+        gated = [x for x in cands if rights.admitted(x["rights"])]  # safety net: no adapter may bypass the licence check
         if len(gated) != len(cands):
             stats.setdefault(name, {})["rights-gate"] = len(cands) - len(gated)
         fresh = [x for x in gated if state.dupe_key(x["title"], x["creator"]) not in state.KEYS]  # same work from another source

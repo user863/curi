@@ -1,9 +1,11 @@
 """Rights gate. A card is admitted only when license, jurisdictions and, for excerpts, derivatives are all 'yes'.
 Answers are 'yes' | 'no' | 'unknown'. Licence data comes from the source; nothing here is a legal opinion.
 
-Policy: CC0, Public Domain Mark and CC BY are admitted. CC BY-SA is admitted for whole images shown
-unmodified; passages, clips and audio excerpts are adaptations, which share-alike would extend to
-(derivatives 'unknown'), so they are rejected. NonCommercial and NoDerivatives are always rejected."""
+Policy: public domain (CC0, Public Domain Mark, the Library of Congress "free to use" grants), attribution (CC BY) and
+share-alike (CC BY-SA) are admitted (ADMITTED): all allow commercial use. Every card is checked against it in run.py, whatever
+its source adapter says. CC BY-SA is admitted for whole images shown unmodified; passages, clips and audio excerpts are
+adaptations, which share-alike would extend to (derivatives 'unknown'), so they fail the gate. NonCommercial and NoDerivatives
+are always rejected."""
 
 # code -> (label, canonical URL, derivatives allowed)
 LICENSES = {
@@ -16,6 +18,7 @@ LICENSES = {
     "LOC-ATTR": ("Free to use with attribution (Library of Congress, Citizen DJ)", "https://citizen-dj.labs.loc.gov/guide/", "yes"),
 }
 ATTRIBUTION_REQUIRED = {"CC-BY", "CC-BY-SA", "LOC-ATTR"}
+ADMITTED = {"CC0", "PDM", "CC-BY", "CC-BY-SA", "LOC-FREE", "LOC-ATTR"}
 # Last-death year for a work to be public domain in life+70 countries as of 2026.
 PD_DEATH_YEAR = 1955
 
@@ -36,6 +39,13 @@ def license_from_url(url):
 def license_from_code(code):
     """Openverse-style short codes: cc0, pdm, by, by-sa (others, including nc/nd, are rejected)."""
     return {"cc0": "CC0", "pdm": "PDM", "by": "CC-BY", "by-sa": "CC-BY-SA"}.get((code or "").lower())
+
+def admitted(rights_):
+    """True when a card's licence is in ADMITTED (commercial use allowed), the gate is open and an attribution line is there when one is owed."""
+    lic = rights_.get("license")
+    if lic not in ADMITTED or rights_.get("gate") != "yes":
+        return False
+    return lic not in ATTRIBUTION_REQUIRED or bool((rights_.get("attribution") or "").strip())
 
 def attribution(creator, title, license, url=None):
     label = LICENSES[license][0]

@@ -1,6 +1,6 @@
 """Playability probe: can iOS WebKit stream this file? Checks range support and the container head.
 Returns 'yes' or the reason it failed."""
-import struct
+import re, struct
 from .http import BROWSER_UA, get_head, get_range, get_span
 
 def mp4_boxes(data):
@@ -76,6 +76,16 @@ def secure_image(url):
     """(verdict, url). An http:// address is upgraded to https when the host serves it there."""
     url = "https://" + url[len("http://"):] if url.startswith("http://") else url
     return image_ok(url), url
+
+IIIF_SIZE = re.compile(r"(/full/!)(\d+),(\d+)(/0/default\.jpg)$")
+WANTED_SIDE = 1920  # long side asked of every source that sizes on request (IIIF, Commons thumbnails); also a Commons standard size
+
+def larger(url):
+    """An IIIF address that asks for a smaller bounding box than WANTED_SIDE asks for WANTED_SIDE; other addresses stay."""
+    m = IIIF_SIZE.search(url)
+    if not m or int(m.group(2)) >= WANTED_SIDE:
+        return url
+    return url[:m.start()] + f"{m.group(1)}{WANTED_SIDE},{WANTED_SIDE}{m.group(4)}"
 
 IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp")
 

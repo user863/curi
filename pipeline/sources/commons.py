@@ -3,7 +3,7 @@ Reads the category through the MediaWiki API in batches of 50, one request at a 
 bots: an identifying user agent, maxlag, and a wait when told to. Pictures are shown from Commons' own
 1280 px renditions. Vector graphics, small images and anything that looks like an icon or logo are left out."""
 import datetime, html, json, re, time, urllib.error, urllib.parse, urllib.request
-from .. import http, quality, rights, state, taxonomy
+from .. import http, probe, quality, rights, state, taxonomy
 from . import visual
 from .common import reject, stable_pick
 
@@ -11,7 +11,7 @@ API = "https://commons.wikimedia.org/w/api.php"
 UA = "Curi/0.1 (https://github.com/user863/curi; research prototype)"
 PICTURES = "Category:Featured pictures on Wikimedia Commons"
 MEDIA = ["Category:Featured media", "Category:Featured videos", "Category:Featured sounds"]  # and their subcategories
-WIDTH = 1280  # a standard Commons thumbnail size
+WIDTH = probe.WANTED_SIDE  # a standard Commons thumbnail size
 MIN_LONG_SIDE = 1000
 MIN_SHORT_SIDE = 600
 FORMATS = ("image/jpeg", "image/png", "image/webp")  # no svg, gif, tiff

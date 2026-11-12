@@ -48,7 +48,7 @@ def candidate(it, src, today):
         return None, "license"
     if it.get("previewNoDistribute"):
         return None, "no-distribute"
-    url = first(it.get("edmIsShownBy"))
+    url = probe.larger(first(it.get("edmIsShownBy")) or "")  # IIIF links sized small are asked for 1600 px
     if not url.startswith("http"):
         return None, "no-media"
     if src["kind"] == "video" and not is_file(url):
