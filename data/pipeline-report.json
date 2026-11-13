@@ -1,17 +1,17 @@
 {
  "totals": {
-  "published": 98542,
+  "published": 101612,
   "addedThisRun": 0,
   "types": {
    "audio": 2016,
    "passage": 484,
-   "video": 1971,
+   "video": 5041,
    "image": 94071
   },
   "rooms": {
    "words": 516,
    "sound": 1984,
-   "film": 1971,
+   "film": 5041,
    "landscapes": 10280,
    "paintings": 6465,
    "objects": 12684,

@@ -32,6 +32,7 @@ from .sources.common import parse_seconds
 CACHE = Path("experiments/films")
 LENGTH_TOLERANCE = 0.02  # the file may differ this much from the length the item states
 RETRIES = 4
+HOST_PAUSE = 3  # seconds between two films of one host (an existing-work run)
 
 
 def first(v):
@@ -65,6 +66,32 @@ def source(doc):
             "file": {"name": f["name"], "format": f["format"], "size": int(f["size"]), "md5": f.get("md5"), "length": length}}
 
 
+def safe(name):
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", name)[:120]
+
+
+def existing(db, min_seconds):
+    """Videos already in the pack, one fixed excerpt each: the base of their clips, best first. Their rights, tags and source
+    carry over to the clips; media url, title and licence are what the work already says."""
+    import sqlite3
+    conn = sqlite3.connect(db)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""SELECT w.uid, w.quality, c.title, c.creator, c.date_label, c.note, c.note_source, c.institution, c.work_title, c.source_url,
+          m.url, m.fallback, m.duration_s, r.license, r.license_url, r.jurisdictions, r.attribution, r.credit_line, s.source_id, s.collection,
+          (SELECT group_concat(t.slug, ',') FROM work_tag wt JOIN tag t ON t.id = wt.tag_id WHERE wt.work_id = w.id) AS tags
+        FROM work w JOIN work_card c ON c.work_id = w.id JOIN work_media m ON m.work_id = w.id JOIN work_rights r ON r.work_id = w.id
+        JOIN work_source s ON s.work_id = w.id
+        WHERE w.type = 'video' AND w.state = 'published' AND w.uid NOT LIKE '%@%' AND m.duration_s >= ? ORDER BY w.quality DESC""", (min_seconds,)).fetchall()
+    return [{"ident": safe(r["uid"]), "uid": r["uid"], "base": dict(r), "title": r["title"], "year": taxonomy.year_of(r["date_label"]),
+             "creator": r["creator"], "license": r["license"], "description": r["note"] or "", "subjects": [], "downloads": 0,
+             "collection": r["collection"], "url": r["url"], "file": {"name": safe(r["uid"]) + ".mp4", "size": None, "md5": None, "length": r["duration_s"]}}
+            for r in rows]
+
+
+def host_of(item):
+    return urllib.parse.urlparse(item["url"]).netloc
+
+
 def md5_of(path):
     h = hashlib.md5()
     with open(path, "rb") as fh:
@@ -75,9 +102,9 @@ def md5_of(path):
 
 def fetch(item, dest):
     """Download item['url'] to dest, resuming a partial file; checks size and md5. Raises when it cannot get a good copy."""
-    want, md5 = item["file"]["size"], item["file"]["md5"]
+    want, md5 = item["file"].get("size"), item["file"].get("md5")
     part = Path(str(dest) + ".part")
-    if dest.exists() and dest.stat().st_size == want and (not md5 or md5_of(dest) == md5):
+    if dest.exists() and (want is None or dest.stat().st_size == want) and (not md5 or md5_of(dest) == md5):
         return dest
     for attempt in range(RETRIES):
         have = part.stat().st_size if part.exists() else 0
@@ -90,7 +117,7 @@ def fetch(item, dest):
             print(f"  fetch attempt {attempt + 1} failed: {e!r}", flush=True)
             time.sleep(2 ** attempt)
             continue
-        if part.stat().st_size == want and (not md5 or md5_of(part) == md5):
+        if (want is None or part.stat().st_size == want) and (not md5 or md5_of(part) == md5):
             part.rename(dest)
             return dest
         part.unlink()  # wrong size or hash: start over
@@ -105,21 +132,22 @@ def duration_of(path):
 
 
 def process(doc, per, keep=False, min_seconds=0):
-    """Stages fetch to stills for one item; returns its clips.json content, or {'error': ...}."""
-    ident = doc["identifier"]
+    """Stages fetch to stills for one item; returns its clips.json content, or {'error': ...}.
+    doc: an advancedsearch row, or an item from existing() (it carries its file)."""
+    item = doc if "file" in doc else source(doc)
+    if "error" in item:
+        return item
+    ident = item["ident"]
     d = CACHE / ident
     d.mkdir(parents=True, exist_ok=True)
     out = d / "clips.json"
-    item = source(doc)
-    if "error" in item:
-        return item
     if (item["file"]["length"] or 0) < min_seconds:
         return {"error": "too-short", "minutes": round((item["file"]["length"] or 0) / 60)}
     video = d / item["file"]["name"]
     if not (d / "analysis.npz").exists() or not (d / "stills").exists():
         fetch(item, video)
         got, stated = duration_of(video), item["file"]["length"]
-        if stated and abs(got - stated) / stated > LENGTH_TOLERANCE:
+        if stated and not item.get("base") and abs(got - stated) / stated > LENGTH_TOLERANCE:  # existing works carry a stated length from other sources
             return {"error": "length-mismatch", "stated": stated, "got": got}
     a = clips.analyse(video, d / "analysis.npz")
     picked = clips.pick(a, per)
@@ -144,7 +172,7 @@ def stage(idents):
     for ident in idents:
         r = json.loads((CACHE / ident / "clips.json").read_text())
         for c in r["clips"]:
-            uid = f"ia-{ident}@{int(c['start'])}"
+            uid = f"{r.get('uid', 'ia-' + ident)}@{int(c['start'])}"
             uids.append(uid)
             vecs.append(c["vec"])
             colour[uid] = palette.features((CACHE / ident / c["still"]).read_bytes())
@@ -198,6 +226,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("items", nargs="*", help="item ids; or use --collection")
     ap.add_argument("--collection", help="take the most downloaded public-domain films of this collection")
+    ap.add_argument("--existing", action="store_true", help="the videos already in the pack (one fixed excerpt each) instead: key scenes for each")
     ap.add_argument("--take", type=int, default=20)
     ap.add_argument("--max-year", type=int, default=0, help="only films from this year or earlier; 0 (default) leaves it to the item's usage field")
     ap.add_argument("--min-downloads", type=int, default=500)
@@ -208,7 +237,10 @@ def main():
     ap.add_argument("--workers", type=int, default=1, help="processes, each with its own model; films are shared out between them")
     ap.add_argument("--shard", help="i/n: this process takes every n-th film (set by --workers)")
     args = ap.parse_args()
-    if args.collection:
+    if args.existing:
+        docs = [d for d in existing(Path(__file__).parent / "works.sqlite", args.min_minutes * 60)]
+        args.take = len(docs)
+    elif args.collection:
         found = [d for d in search(args.collection, args.max_year, args.take * 6, args.min_downloads) if not quality.is_junk_title(first(d.get("title")))]
         seen, by_creator, docs = set(), collections.Counter(), []
         for d in found:  # one film once, and at most --per-creator of one maker (Chaplin alone has dozens)
@@ -218,8 +250,7 @@ def main():
             seen.add(key); by_creator[maker] += 1; docs.append(d)
     else:
         docs = docs_for(args.items)
-    docs = [d for d in docs if not (CACHE / d["identifier"] / "clips.json").exists()][:args.take * 2]  # items already done are kept as they are
-    docs = docs[:args.take * 2]  # spare candidates for the ones that fail the checks
+    docs = [d for d in docs if not (CACHE / (d.get("ident") or d["identifier"]) / "clips.json").exists()][:args.take * 2]  # done items are kept  # spare candidates for the ones that fail the checks
     if args.workers > 1:
         procs = [subprocess.Popen([sys.executable, "-W", "ignore", "-m", "pipeline.films", *sys.argv[1:], "--workers", "1", "--shard", f"{i}/{args.workers}"])
                  for i in range(args.workers)]
@@ -229,21 +260,26 @@ def main():
         docs = []
     elif args.shard:
         i, n = map(int, args.shard.split("/"))
-        docs = docs[i::n]
-        args.take = -(-args.take // n)
+        hosts = sorted({host_of(d) for d in docs if "file" in d})
+        by_host = len(hosts) > 1 or not hosts  # a host stays with one worker (one download at a time); the last host is shared
+        docs = [d for d in docs if (hosts.index(host_of(d)) % n if "file" in d else 0) == i] if by_host and hosts else docs[i::n]
+        args.take = len(docs) if args.existing else -(-args.take // n)
     done = []
     for doc in docs:
         if len(done) >= args.take:
             break
-        ident = doc["identifier"]
+        ident = doc.get("ident") or doc["identifier"]
         try:
             r = process(doc, args.per, args.keep, args.min_minutes * 60)
+            if "file" in doc:
+                time.sleep(HOST_PAUSE)
         except Exception as e:  # one bad item must not stop the batch
             r = {"error": repr(e)[:200]}
         print(ident, r.get("error") or f"{len(r['clips'])} clips of {r['duration'] / 60:.0f} min", flush=True)
         if "error" not in r:
             done.append(ident)
         else:
+            (CACHE / ident).mkdir(parents=True, exist_ok=True)
             (CACHE / ident / "rejected.json").write_text(json.dumps(r))
     if args.shard:  # a worker leaves the features to the parent
         return
