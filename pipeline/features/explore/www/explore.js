@@ -1,7 +1,8 @@
 // Canvas explorer. Every picture has a fixed size in map units (D), so it grows with the zoom. Zoomed out the pictures are
 // colour squares; once a picture is big enough on screen its thumbnail loads. The layout is spread once so none overlap.
-// Click a picture to open it.
+// Click a picture to open it. ?set=pack shows the published pack (92k pictures, loaded from their sources, politely).
 (() => {
+  const PACK = new URLSearchParams(location.search).get('set') === 'pack';
   const $ = (s) => document.querySelector(s);
   const cv = $('#cv'), ctx = cv.getContext('2d');
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -10,7 +11,8 @@
   const view = { x: 0, y: 0, s: 1, k: 1 }; // screen = view + world * s; k is the zoom factor
   let filter = {}, hover = null, drag = null, raf = 0;
   const cache = new Map();
-  const CACHE_MAX = 5000, D = 0.0055, FILL = 0.92, IMG_MIN = 14; // D: spacing in map units; IMG_MIN: screen px at which thumbnails load
+  let D = 0.0055;
+  const CACHE_MAX = 5000, FILL = 0.92, IMG_MIN = 14; // D: spacing in map units; IMG_MIN: screen px at which thumbnails load
 
   const size = () => {
     dpr = window.devicePixelRatio || 1;
@@ -56,11 +58,52 @@
     if (e) { cache.delete(p.u); cache.set(p.u, e); return e; }
     e = { img: new Image(), ok: false };
     e.img.onload = () => { e.ok = true; schedule(); };
-    e.img.src = `train/report/thumbs/${p.u}.jpg`;
+    if (PACK) polite(p, e); else e.img.src = `train/report/thumbs/${p.u}.jpg`;
     cache.set(p.u, e);
     if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
     return e;
   };
+
+  // Polite loading: the pack's pictures come straight from the institutions, so requests wait in a queue. At most PAR_HOST in flight
+  // per host with HOST_GAP ms between starts, PAR_ALL overall; only pictures still on screen when their turn comes (newest first);
+  // a host that fails FAILS times in a row rests for REST ms; a failed picture is not asked for again. Pictures use their smaller
+  // variant where the source sizes on request, and no referrer is sent.
+  const PAR_HOST = 2, HOST_GAP = 400, PAR_ALL = 8, REST = 60000, FAILS = 3;
+  const hosts = new Map(), queue = [];
+  let inflight = 0, wanted = new Set(), timer = 0, loaded = 0, failed = 0;
+  const hostOf = (u) => { try { return new URL(u).host; } catch { return ''; } };
+  const hostState = (h) => hosts.get(h) ?? hosts.set(h, { active: 0, last: 0, fails: 0, until: 0 }).get(h);
+  const status = () => {
+    const note = $('#note');
+    if (!note) return;
+    const resting = [...hosts.values()].filter((h) => h.until > performance.now()).length;
+    note.textContent = `images load from their sources, slowly: ${loaded} shown, ${queue.length} waiting${failed ? `, ${failed} failed` : ''}${resting ? `, ${resting} source(s) resting` : ''}`;
+  };
+  const pump = () => {
+    timer = 0;
+    const now = performance.now();
+    let wait = 500;
+    for (let i = queue.length - 1; i >= 0 && inflight < PAR_ALL; i--) {
+      const job = queue[i];
+      if (!wanted.has(job.p.u)) { queue.splice(i, 1); cache.delete(job.p.u); continue; }
+      const h = hostState(job.host), ready = Math.max(h.last + HOST_GAP, h.until);
+      if (h.active >= PAR_HOST || ready > now) { wait = Math.min(wait, h.active >= PAR_HOST ? 200 : Math.max(50, ready - now)); continue; }
+      queue.splice(i, 1);
+      h.active++; h.last = now; inflight++;
+      const end = (ok) => {
+        h.active--; inflight--;
+        if (ok) { loaded++; h.fails = 0; } else { failed++; if (++h.fails >= FAILS) { h.until = performance.now() + REST; h.fails = 0; } }
+        status(); if (!timer) timer = setTimeout(pump, 0);
+      };
+      job.e.img.onload = () => { job.e.ok = true; schedule(); end(true); };
+      job.e.img.onerror = () => end(false);
+      job.e.img.referrerPolicy = 'no-referrer';
+      job.e.img.src = job.url;
+    }
+    status();
+    if (queue.length && !timer) timer = setTimeout(pump, wait);
+  };
+  const polite = (p, e) => { queue.push({ p, e, url: p.th || p.img, host: hostOf(p.th || p.img) }); if (!timer) timer = setTimeout(pump, 0); };
 
   // Pushes overlapping pictures apart (neighbours within D) until none are, so absolute sizes never overlap.
   const spread = (list) => {
@@ -102,6 +145,7 @@
     ctx.clearRect(0, 0, W, H);
     layout();
     const big = tileSize() >= IMG_MIN;
+    if (PACK) wanted = big ? new Set(tiles.map((t) => t.p.u)) : new Set();
     for (const t of tiles) {
       const e = big ? thumb(t.p) : null;
       if (e?.ok) {
@@ -185,7 +229,7 @@
       ${p.jc ? `<p class="m">teacher</p><p class="tags">${p.jc.map((x) => `<span>${esc(x)}</span>`).join('')}</p>` : '<p class="m">not labelled yet</p>'}
       ${p.st && p.st.length ? `<p class="m">student${p.split ? ` (${p.split === 'held' ? 'held-out' : 'trained on'})` : ''}</p><p class="tags">${p.st.map((x) => `<span>${esc(x[0])}</span>`).join('')}</p>` : ''}
       <p class="m">${esc((p.tags || []).join(', '))}</p>${p.url ? `<p><a href="${esc(p.url)}" target="_blank" rel="noopener">Source</a></p>` : ''}</div>`;
-    box.innerHTML = `<img class="pic" alt="" src="train/images/${esc(p.u)}.jpg">${side}`;
+    box.innerHTML = `<img class="pic" alt="" referrerpolicy="no-referrer" src="${PACK ? esc(p.img) : `train/images/${esc(p.u)}.jpg`}">${side}`;
     const pic = box.querySelector('.pic');
     const set = (x, y, w, h) => Object.assign(pic.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px` });
     set(t.x, t.y, t.w, t.w);
@@ -218,7 +262,34 @@
     tween = requestAnimationFrame(step);
   };
 
-  Promise.all([fetch('train/report/data.json').then((r) => r.json()), fetch('train/explore/layout.json').then((r) => r.json()),
+  const finish = () => {
+    D = 0.736 / Math.sqrt(pts.length); // 0.0055 for the 17.9k training pictures; the pack's pictures are smaller in proportion
+    ['colour', 'tags'].forEach((name) => {
+      const set = pts.map((p) => ({ x: p.to[name][0], y: p.to[name][1] }));
+      spread(set);
+      pts.forEach((p, i) => { p.to[name] = [set[i].x, set[i].y]; });
+    });
+    pts.forEach((p) => { [p.x, p.y] = p.to.colour; });
+    rawSorted = pts.filter((p) => p.qm).map((p) => p.qm.r).sort((a, b) => a - b);
+    refilter();
+  };
+  if (PACK) {
+    $('#qbtn').hidden = true;
+    const note = document.createElement('span'); note.id = 'note'; note.style.cssText = 'color:var(--mut);font-size:12px';
+    $('#bar').append(note);
+    Promise.all([fetch('pack/data.json').then((r) => r.json()), fetch('pack/explore/layout.json').then((r) => r.json()),
+      fetch('pack/explore/layout_tags.json').then((r) => r.json())]).then(([items, rows, tagRows]) => {
+      const by = new Map(items.map((i) => [i.u, i]));
+      const tags = new Map(tagRows.map((r) => [r.u, r]));
+      pts = rows.flatMap((l, i) => {
+        const it = by.get(l.u), t = tags.get(l.u) ?? l; // a picture without student tags stays where its colour puts it
+        return it ? [{ ...it, x: l.x, y: l.y, to: { colour: [l.x, l.y], tags: [t.x, t.y] }, rank: i, hex: it.pal[0]?.[0] ?? '#888',
+          text: `${it.t} ${it.c} ${(it.tags || []).join(' ')}`.toLowerCase() }] : [];
+      });
+      pts.sort(() => Math.random() - 0.5).forEach((p, i) => { p.rank = i; });
+      finish();
+    });
+  } else Promise.all([fetch('train/report/data.json').then((r) => r.json()), fetch('train/explore/layout.json').then((r) => r.json()),
     fetch('train/explore/layout_tags.json').then((r) => r.json()), fetch('train/report/quality.json').then((r) => r.json())]).then(([items, colourRows, tagRows, quality]) => {
     const by = new Map(items.map((i) => [i.u, i]));
     const tags = new Map(tagRows.map((r) => [r.u, r]));
@@ -228,14 +299,7 @@
       return it && t ? [{ ...it, qm: quality[l.u], x: l.x, y: l.y, to: { colour: [l.x, l.y], tags: [t.x, t.y] }, rank: order[i], hex: it.pal[0]?.[0] ?? '#888',
         text: `${it.t} ${it.c} ${(it.tags || []).join(' ')} ${(it.jc || []).join(' ')} ${(it.st || []).map((x) => x[0]).join(' ')}`.toLowerCase() }] : [];
     });
-    ['colour', 'tags'].forEach((name) => { // spread each layout on its own so neither overlaps
-      const set = pts.map((p) => ({ x: p.to[name][0], y: p.to[name][1] }));
-      spread(set);
-      pts.forEach((p, i) => { p.to[name] = [set[i].x, set[i].y]; });
-    });
-    pts.forEach((p) => { [p.x, p.y] = p.to.colour; });
-    rawSorted = pts.filter((p) => p.qm).map((p) => p.qm.r).sort((a, b) => a - b);
-    refilter();
+    finish();
   });
 
   // Quality metrics: reasons, distribution, weakest sources and the lowest-scored works of the whole catalogue.

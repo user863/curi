@@ -5,6 +5,7 @@ library(jsonlite)
 
 train <- normalizePath(Sys.getenv("TRAIN_DIR", "../../../experiments/train"))
 addResourcePath("train", train)
+addResourcePath("pack", normalizePath(Sys.getenv("PACK_DIR", "../../../experiments/pack")))
 items <- fromJSON(file.path(train, "report", "data.json"), simplifyVector = TRUE)
 sources <- sort(unique(items$src))
 hues <- sort(unique(na.omit(items$hue)))
@@ -20,6 +21,8 @@ ui <- fluidPage(
     selectInput("quality", NULL, c("all quality" = "", "lowest 100" = "n100", "lowest 5%" = "p5", "lowest 20%" = "p20", "penalised" = "pen"), width = "130px"),
     checkboxInput("labelled", "labelled only", FALSE, width = "130px"),
     tags$button(id = "qbtn", type = "button", "Quality metrics"),
+    tags$a(href = "?", "Training set"), tags$a(href = "?set=pack", "Pack"),
+    tags$a(href = "#", onclick = "location.href = location.protocol + '//' + location.hostname + ':4431/'; return false;", "Film clips"),  # experiments/clips/serve.py
     span(id = "count")),
   tags$canvas(id = "cv"),
   div(id = "tip"),
