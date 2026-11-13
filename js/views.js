@@ -27,7 +27,7 @@ export const fmtTime = (s) => {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
 
-const LICENSE_LABEL = { CC0: 'CC0', PDM: 'Public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA', 'LOC-FREE': 'Free to use', 'LOC-ATTR': 'Free to use, credit' };
+const LICENSE_LABEL = { CC0: 'CC0', PDM: 'Public domain', 'NASA-PD': 'NASA public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA', 'LOC-FREE': 'Free to use', 'LOC-ATTR': 'Free to use, credit' };
 const licenseLabel = (r) => LICENSE_LABEL[r.license] || r.license;
 
 export const featureLabel = (feature, rooms) => {

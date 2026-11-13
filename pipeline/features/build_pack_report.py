@@ -38,7 +38,7 @@ def main():
     rows = conn.execute("""SELECT w.uid, c.title, c.creator, c.date_label, c.institution, c.source_url, m.url, w.source,
         (SELECT group_concat(t.slug, ',') FROM work_tag wt JOIN tag t ON t.id = wt.tag_id WHERE wt.work_id = w.id)
         FROM work w JOIN work_card c ON c.work_id = w.id JOIN work_media m ON m.work_id = w.id
-        WHERE w.state = 'published' AND w.type = 'image' AND m.url IS NOT NULL""").fetchall()
+        WHERE w.state = 'published' AND w.type = 'image' AND m.url IS NOT NULL AND m.url NOT LIKE 'https://www.artic.edu/%'  -- native-app-only host""").fetchall()
     data, keep = [], {}
     for uid, title, creator, date, inst, link, url, src, tags in rows:
         f = col.get(uid)

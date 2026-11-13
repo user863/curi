@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from './ui';
 import { Image } from 'expo-image';
+import { imageSource } from './imageSource';
 import { tonePalette } from './theme';
 
 const PAGE = 24; // tiles added per step
@@ -115,7 +116,7 @@ const TileView = ({ card, width, removable, onRatio, onPick, onUnsave, onBroken 
       <Pressable onPress={onPick} style={[styles.tile, { backgroundColor: pal.bg }]}>
         {uri ? (
           <Image
-            source={{ uri }} contentFit="cover" transition={150}
+            source={imageSource(uri)} contentFit="cover" transition={150}
             style={{ width, height: width * ratio }}
             onLoad={(e) => { const r = Math.min(2, Math.max(0.6, e.source.height / e.source.width)); setRatio(r); onRatio(r); }}
             onError={() => { if (card.type === 'image') onBroken(); }}

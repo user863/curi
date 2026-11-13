@@ -2,6 +2,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from './ui';
 import { Image } from 'expo-image';
+import { imageSource } from './imageSource';
 import * as Search from '../../js/search.js';
 import * as Colours from '../../js/colours.js';
 import { complete } from '../../js/suggest.js';
@@ -84,7 +85,7 @@ const GalleryView = ({ catalog, gallery, top, width, height, onPick, onClose }: 
         onMomentumScrollEnd={(e) => setAt(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item }) => (
           <Pressable onPress={() => onPick(item.n, item.cl)} style={{ width, height: height - top - 120, justifyContent: 'center' }}>
-            <Image source={{ uri: item.media.url }} contentFit="contain" transition={150} style={{ width, height: height - top - 160 }} />
+            <Image source={imageSource(item.media.url)} contentFit="contain" transition={150} style={{ width, height: height - top - 160 }} />
             <Text numberOfLines={2} style={styles.galleryCaption}>{item.title}{item.creator && item.creator !== 'Unknown' ? ` · ${item.creator}` : ''}</Text>
           </Pressable>
         )}

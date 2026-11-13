@@ -9,7 +9,7 @@ import { update } from './store';
 import { tonePalette } from './theme';
 import { deviceLang, tagLabel } from '../../js/vocab.js';
 
-const LICENSE = { CC0: 'CC0', PDM: 'Public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA', 'LOC-FREE': 'Free to use', 'LOC-ATTR': 'Free to use, credit' } as Record<string, string>;
+const LICENSE = { CC0: 'CC0', PDM: 'Public domain', 'NASA-PD': 'NASA public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA', 'LOC-FREE': 'Free to use', 'LOC-ATTR': 'Free to use, credit' } as Record<string, string>;
 const label = (r: any) => LICENSE[r.license] || r.license;
 const join = (parts: (string | undefined)[], sep = ' · ') => parts.filter(Boolean).join(sep);
 const P = tonePalette('paper');

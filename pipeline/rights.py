@@ -14,11 +14,13 @@ LICENSES = {
     "CC-BY": ("CC BY", "https://creativecommons.org/licenses/by/4.0/", "yes"),
     "CC-BY-SA": ("CC BY-SA", "https://creativecommons.org/licenses/by-sa/4.0/", "unknown"),
     # Library of Congress Citizen DJ: free to use, modify and sell, stated per collection
+    # NASA media usage guidelines: NASA-credited imagery is generally not copyrighted; third-party credits are filtered out upstream
+    "NASA-PD": ("NASA public domain", "https://www.nasa.gov/nasa-brand-center/images-and-media/", "yes"),
     "LOC-FREE": ("Free to use (Library of Congress, Citizen DJ)", "https://citizen-dj.labs.loc.gov/guide/", "yes"),
     "LOC-ATTR": ("Free to use with attribution (Library of Congress, Citizen DJ)", "https://citizen-dj.labs.loc.gov/guide/", "yes"),
 }
 ATTRIBUTION_REQUIRED = {"CC-BY", "CC-BY-SA", "LOC-ATTR"}
-ADMITTED = {"CC0", "PDM", "CC-BY", "CC-BY-SA", "LOC-FREE", "LOC-ATTR"}
+ADMITTED = {"CC0", "PDM", "NASA-PD", "CC-BY", "CC-BY-SA", "LOC-FREE", "LOC-ATTR"}
 # Last-death year for a work to be public domain in life+70 countries as of 2026.
 PD_DEATH_YEAR = 1955
 

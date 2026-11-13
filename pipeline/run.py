@@ -3,7 +3,7 @@ Usage (from the project root): python3 -m pipeline.run [--only met,gutenberg,pre
 import argparse, collections, json
 from pathlib import Path
 from . import db, embed, export, quality, rights, secrets, state
-from .sources import archive, citizen_dj, cleveland, europeana, europeana_bulk, europeana_galleries, gutenberg, met, openverse, texts
+from .sources import archive, artic, nasa, citizen_dj, cleveland, europeana, europeana_bulk, europeana_galleries, gutenberg, met, openverse, texts
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -49,6 +49,8 @@ def main():
     jobs += [(e["name"], (lambda e: lambda s: europeana.run(e, s))(e), e) for e in cfg["europeana"]]
     jobs += [(e["name"], (lambda e: lambda s: europeana_bulk.run(e, s))(e), e) for e in cfg["europeana_bulk"]]
     jobs += [("europeana-galleries", lambda s: europeana_galleries.run(cfg["europeana_galleries"], s), cfg["europeana_galleries"])]
+    jobs += [("artic", lambda s: artic.run(cfg["artic"], s), cfg["artic"])]
+    jobs += [("nasa", lambda s: nasa.run(cfg["nasa"], s), cfg["nasa"])]
     jobs += [("openverse", lambda s: openverse.run(cfg["openverse"], s), cfg["openverse"])]
 
     conn = db.connect(Path(__file__).parent / "works.sqlite")

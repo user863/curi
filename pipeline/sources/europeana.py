@@ -20,11 +20,13 @@ def search(key, src, extra, rows):
     if src.get("concept"):
         params.append(("qf", f'skos_concept:"http://data.europeana.eu/concept/{src["concept"]}"'))
     if src.get("min_tier"):
-        params.append(("qf", f"contentTier:{src['min_tier']}"))
+        params.append(("qf", f"contentTier:[{src['min_tier']} TO 4]"))
     params += list(extra.items())
     return get_json(f"{API}?{urllib.parse.urlencode(params)}", delay=API_DELAY, headers={"X-Api-Key": key})
 
 def providers(key, src):
+    if src.get("only"):  # a fixed list instead of the largest providers
+        return src["only"]
     data = search(key, src, {"profile": "facets", "facet": "DATA_PROVIDER", "f.DATA_PROVIDER.facet.limit": src["providers"]}, 0)
     fields = next((f["fields"] for f in data.get("facets", []) if f["name"] == "DATA_PROVIDER"), [])
     return [f["label"] for f in fields]

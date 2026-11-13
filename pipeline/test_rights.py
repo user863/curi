@@ -14,5 +14,10 @@ class Admitted(unittest.TestCase):
         self.assertFalse(rights.admitted({"license": "CC-BY", "gate": "yes", "attribution": " "}))
         self.assertTrue(rights.admitted({"license": "CC0", "gate": "yes", "attribution": ""}))
 
+    def test_nasa_public_domain(self):
+        r = rights.rights("NASA-PD", "worldwide", "NASA", "image")
+        self.assertTrue(rights.admitted(r))
+        self.assertEqual(r["derivativesOk"], "yes")
+
 if __name__ == "__main__":
     unittest.main()

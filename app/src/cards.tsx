@@ -3,6 +3,7 @@ import { Animated, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Vi
 import { AnimatedText, Text, familyFor } from './ui';
 import Svg, { Path } from 'react-native-svg';
 import { Image } from 'expo-image';
+import { imageSource } from './imageSource';
 import { VideoView } from 'expo-video';
 import { fmtTime } from '../../js/views.js';
 import type { Entry } from './feed';
@@ -33,7 +34,7 @@ export type Ctx = {
 
 const join = (parts: (string | undefined)[], sep = ' · ') => parts.filter(Boolean).join(sep);
 const who = (c: any) => (c.creator === 'Unknown' ? '' : c.creator);
-const LICENSE = { CC0: 'CC0', PDM: 'Public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA', 'LOC-FREE': 'Free to use', 'LOC-ATTR': 'Free to use, credit' } as Record<string, string>;
+const LICENSE = { CC0: 'CC0', PDM: 'Public domain', 'NASA-PD': 'NASA public domain', 'CC-BY': 'CC BY', 'CC-BY-SA': 'CC BY-SA', 'LOC-FREE': 'Free to use', 'LOC-ATTR': 'Free to use, credit' } as Record<string, string>;
 const licenseLabel = (r: any) => LICENSE[r.license] || r.license;
 const clampSize = (min: number, vw: number, max: number, w: number) => Math.min(max, Math.max(min, vw * w));
 const STRIP = 28; // height of the row under a film: full screen button, 2× while fast-forwarding
@@ -75,7 +76,7 @@ export const ImageCard = memo(({ entry, active, ctx, under }: Props) => {
       <View style={[styles.stage, { top: ctx.top + 14, bottom: ctx.bottom + 62 }]}>
         <Zoom width={ctx.w} height={stageH} active={active}>
           <Image
-            source={{ uri: card.media.url }}
+            source={imageSource(card.media.url)}
             contentFit="contain"
             transition={250}
             style={{ width: ctx.w, height: stageH }}

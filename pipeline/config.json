@@ -1207,6 +1207,81 @@
       "per_provider": 1500,
       "max_per_group": 1666,
       "theme": "art"
+    },
+    {
+      "type": "IMAGE",
+      "kind": "image",
+      "min_tier": 2,
+      "only": [
+        "Nationalmuseum Sweden",
+        "Swedish History Museum",
+        "Upplands Museum",
+        "Museum of Arts and Crafts, Hamburg",
+        "Finnish National Gallery",
+        "Finnish Heritage Agency",
+        "Berlin State Library",
+        "Kunstbibliothek, Staatliche Museen zu Berlin",
+        "Heidelberg University Library",
+        "Kassel University Library",
+        "Wellcome Collection",
+        "KB, National Library of the Netherlands",
+        "National Library of Norway",
+        "Preus museum, Norway",
+        "Austrian Gallery Belvedere",
+        "Herzog August Library",
+        "The Norwegian Museum of Cultural History"
+      ],
+      "tones": [
+        "ink",
+        "paper",
+        "mauve",
+        "sky"
+      ],
+      "tags": [
+        "europeana"
+      ],
+      "workers": 24,
+      "name": "eu-pdia-sources",
+      "take": 20000,
+      "per_provider": 2500,
+      "max_per_group": 2000
     }
-  ]
+  ],
+  "artic": {
+    "pages_per_bucket": 4,
+    "take": 3000,
+    "max_per_group": 600
+  },
+  "nasa": {
+    "queries": [
+      "nebula",
+      "galaxy",
+      "earth from space",
+      "moon",
+      "mars",
+      "apollo",
+      "saturn",
+      "jupiter",
+      "hubble",
+      "aurora",
+      "comet",
+      "sun",
+      "spacecraft",
+      "astronaut",
+      "aircraft",
+      "rocket launch",
+      "supernova",
+      "star cluster",
+      "black hole",
+      "landscape mars",
+      "earth night",
+      "hurricane",
+      "space station",
+      "venus mercury",
+      "asteroid"
+    ],
+    "pages_per_query": 3,
+    "take": 2500,
+    "max_per_group": 600
+  }
 }

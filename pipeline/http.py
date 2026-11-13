@@ -5,6 +5,7 @@ from pathlib import Path
 CACHE = Path(__file__).parent / ".cache"
 UA = "commonplace-pipeline/0.1 (research prototype)"
 BROWSER_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+HOST_HEADERS = {"www.artic.edu": {"AIC-User-Agent": "curi (research prototype)"}}  # hosts that serve only clients that identify themselves
 _lock = threading.Lock()
 _next = {}  # host -> earliest time of the next request
 HEAD_GAP = 0.05  # seconds between probes to one host (0.1 before; raise again if a host starts refusing)
@@ -12,6 +13,9 @@ _host_min = 0.0  # long jobs: at least this many seconds between requests to one
 _gap = 0.0  # long jobs: at least this many seconds between any two requests
 _gap_lock = threading.Lock()
 _gap_last = 0.0  # when the last request was actually let through
+
+def _headers(url, headers=None):
+    return {"User-Agent": UA, **HOST_HEADERS.get(urllib.parse.urlparse(url).netloc, {}), **(headers or {})}
 
 def configure(per_host=0.0, per_second=0.0):
     """Stricter spacing for long, unattended jobs: seconds between requests per host, and requests per second overall."""
@@ -42,7 +46,7 @@ def _fetch(url, delay, headers=None):
     for attempt in range(4):
         _wait(url, delay)
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})})
+            req = urllib.request.Request(url, headers=_headers(url, headers))
             with urllib.request.urlopen(req, timeout=60) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
@@ -78,7 +82,7 @@ def get_range(url, nbytes=262144):
     if key.exists() and meta.exists():
         return json.loads(meta.read_text()), key.read_bytes()
     _wait(url, 0.1)
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Range": f"bytes=0-{nbytes - 1}"})
+    req = urllib.request.Request(url, headers=_headers(url, {"Range": f"bytes=0-{nbytes - 1}"}))
     with urllib.request.urlopen(req, timeout=60) as r:
         info = {"status": r.status, "contentRange": r.headers.get("Content-Range"),
                 "contentType": r.headers.get("Content-Type")}
@@ -94,7 +98,7 @@ def get_span(url, start, nbytes):
     if key.exists():
         return key.read_bytes()
     _wait(url, 0.1)
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Range": f"bytes={start}-{start + nbytes - 1}"})
+    req = urllib.request.Request(url, headers=_headers(url, {"Range": f"bytes={start}-{start + nbytes - 1}"}))
     with urllib.request.urlopen(req, timeout=60) as r:
         if r.status != 206:
             raise ValueError("no range support")
@@ -109,7 +113,7 @@ def get_head(url, nbytes=2048, ua=UA):
     if meta.exists():
         return json.loads(meta.read_text())
     _wait(url, HEAD_GAP)
-    req = urllib.request.Request(url, headers={"User-Agent": ua, "Range": f"bytes=0-{nbytes - 1}"})
+    req = urllib.request.Request(url, headers=_headers(url, {"User-Agent": ua, "Range": f"bytes=0-{nbytes - 1}"}))
     with urllib.request.urlopen(req, timeout=40) as r:
         r.read(nbytes)
         total = None
