@@ -11,7 +11,8 @@ from .. import http, imagestats
 from .embed_rest import DB, HOST_GAP, MAX_BYTES, SLOW_HOSTS, THREADS, WINDOW, pending
 
 CHUNK = 5000
-SLOW_STREAM = {"thumb.wikimedia.org", "upload.wikimedia.org"}  # one request per HOST_GAP, so they get a stream of their own
+SKIP_HOSTS = {"upload.wikimedia.org"}  # originals answer 429 with Retry-After 600; each try would hold a worker for a minute
+SLOW_STREAM = {"thumb.wikimedia.org"}  # one request per HOST_GAP, so they get a stream of their own
 
 def known(*dirs):
     done = set()
@@ -74,6 +75,7 @@ def main():
         print("done", flush=True)
         return
     todo = pending(known(out, args.catalog))
+    todo = [x for x in todo if urlparse(x[1]).netloc not in SKIP_HOSTS]
     random.Random(0).shuffle(todo)
     # a host that is fetched slowly must not hold up the others: its own stream
     slow = [x for x in todo if urlparse(x[1]).netloc in SLOW_STREAM]

@@ -1,27 +1,27 @@
 {
  "totals": {
-  "published": 118387,
+  "published": 158365,
   "addedThisRun": 0,
   "types": {
    "audio": 2016,
    "passage": 484,
-   "video": 5041,
-   "image": 110846
+   "video": 6764,
+   "image": 149101
   },
   "rooms": {
    "words": 516,
    "sound": 1984,
-   "film": 5041,
-   "landscapes": 11970,
-   "paintings": 8741,
-   "objects": 14835,
-   "cities": 11608,
-   "interiors": 7142,
-   "manuscripts": 9472,
-   "deep-time": 5083,
-   "people": 15500,
-   "drawings": 15230,
-   "wildlife": 11265
+   "film": 6764,
+   "landscapes": 17088,
+   "paintings": 17774,
+   "objects": 18257,
+   "cities": 14391,
+   "interiors": 11413,
+   "manuscripts": 11845,
+   "deep-time": 5634,
+   "people": 20444,
+   "drawings": 19532,
+   "wildlife": 12723
   }
  }
 }

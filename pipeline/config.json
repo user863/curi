@@ -1,12 +1,12 @@
 {
   "met": {
-    "pool_per_department": 60,
+    "pool_per_department": 400,
     "exclude_departments": [
       16,
       8
     ],
-    "take": 400,
-    "max_per_group": 8,
+    "take": 4000,
+    "max_per_group": 400,
     "delay": 0.35
   },
   "gutenberg": {
@@ -208,8 +208,8 @@
   ],
   "cleveland": {
     "on_view_pool": 7000,
-    "take": 1500,
-    "max_per_group": 150
+    "take": 6000,
+    "max_per_group": 500
   },
   "europeana": [
     {
@@ -1283,5 +1283,18 @@
     "pages_per_query": 3,
     "take": 2500,
     "max_per_group": 600
+  },
+  "rijksmuseum": {
+    "types": {
+      "painting": 5000,
+      "sculpture": 1800,
+      "furniture": 1400,
+      "jewellery": 600,
+      "costume": 100,
+      "drawing": 4000
+    },
+    "workers": 8,
+    "take": 12000,
+    "max_per_group": 5000
   }
 }
