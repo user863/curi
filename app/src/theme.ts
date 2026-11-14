@@ -1,4 +1,4 @@
-import { complement, luminance } from '../../js/colour.js';
+import { accentOf, complement, luminance, MAT, shade } from '../../js/colour.js';
 
 export type Tone = 'paper' | 'mauve' | 'sun' | 'ink' | 'sky';
 export type Palette = { bg: string; fg: string; dim: string; accent: string; barBg: string; barFg: string; barInv: string };
@@ -17,13 +17,15 @@ const TONES: Record<Tone, Palette> = {
 };
 
 // The palette tone of a card, or the colour matched to its picture (card.sw) when Settings ask for it.
-export const paletteFor = (card: any, colour: string): Palette => {
+export const paletteFor = (card: any, colour: string, mat: Record<string, unknown> = {}): Palette => {
   if (colour === 'image' && card.sw) {
-    const bg = complement(card.sw);
+    const m = { ...MAT, ...mat } as typeof MAT;
+    const bg = complement(card.sw, card.id, m);
     const dark = luminance(bg) < 0.35;
     const [fg, inv, dim] = dark ? ['#ffffff', bg, alpha('255,255,255', 0.66)] : ['#000000', '#ececec', alpha('0,0,0', 0.62)];
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(bg.slice(i, i + 2), 16));
-    return { bg, fg, dim, accent: dark ? SUN : '#000000', barBg: `rgba(${r},${g},${b},0.88)`, barFg: fg, barInv: inv };
+    const bar = m.bar === 'deeper' ? shade(bg, -0.14) : m.bar === 'lighter' ? shade(bg, 0.14) : bg;
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(bar.slice(i, i + 2), 16));
+    return { bg, fg, dim, accent: m.accent === 'contrast' ? accentOf(bg) : dark ? SUN : '#000000', barBg: `rgba(${r},${g},${b},0.88)`, barFg: fg, barInv: inv };
   }
   return TONES[(card.editorial.tone as Tone) in TONES ? (card.editorial.tone as Tone) : 'paper'];
 };

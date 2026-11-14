@@ -2,6 +2,7 @@ import { ReactNode, useMemo, useRef } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './ui';
 import { Palette } from './theme';
+import { scrollLock } from './scrollLock';
 
 export const TAP_MS = 260;
 const SWIPE_PX = 70; // sideways drag that counts: right is more, left is fewer like this
@@ -30,8 +31,8 @@ export const Shell = ({ palette, width, swipeable, under, onTap, onHold, onSwipe
   const far = Math.max(SWIPE_PX, width * 0.22);
 
   const pan = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponderCapture: (_, g) => swipeable && !grip.held && Math.abs(g.dx) > 14 && Math.abs(g.dx) > 1.5 * Math.abs(g.dy),
-    onPanResponderGrant: () => { live.current = true; },
+    onMoveShouldSetPanResponderCapture: (_, g) => swipeable && !grip.held && Math.abs(g.dx) > 10 && Math.abs(g.dx) > 1.5 * Math.abs(g.dy),
+    onPanResponderGrant: () => { live.current = true; scrollLock.set(true); },
     onPanResponderMove: (_, g) => {
       x.setValue(g.dx);
     },
@@ -43,12 +44,16 @@ export const Shell = ({ palette, width, swipeable, under, onTap, onHold, onSwipe
         Animated.timing(x, { toValue: dir * width * 1.3, duration: 220, useNativeDriver: true }).start(() => {
           onSwipe(dir);
           // the list scrolls to the next card first; the flown-off card returns to centre only once it is out of sight
-          setTimeout(() => x.setValue(0), 200);
+          setTimeout(() => { x.setValue(0); scrollLock.set(false); }, 200);
         });
-      } else Animated.spring(x, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+      } else {
+        scrollLock.set(false);
+        Animated.spring(x, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+      }
     },
     onPanResponderTerminate: () => {
       live.current = false;
+      scrollLock.set(false);
       Animated.spring(x, { toValue: 0, useNativeDriver: true }).start();
     },
   }), [swipeable, width, far, onSwipe, x]);

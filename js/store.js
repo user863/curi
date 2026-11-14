@@ -22,7 +22,7 @@ const fromBase64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 // session: where pacing stopped, { setNo, pos, plan }, so a set resumes.
 // onboarded: 'yes' | 'no' (skipped) | 'unknown' (not asked yet)
-export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), bad: new Uint8Array(0), onboarded: 'unknown', filter: { types: [], tags: [] }, colour: 'palette', sets: false, nav: 'icons', session: null });
+export const initial = () => ({ profile: emptyProfile(), saved: [], savedCl: {}, seen: new Uint8Array(0), bad: new Uint8Array(0), onboarded: 'unknown', filter: { types: [], tags: [] }, colour: 'palette', mat: {}, sets: false, nav: 'icons', session: null });
 
 // A pack built on another embedding model leaves the stored taste profile and cluster ids meaningless:
 // the profile starts over, saved works are found again by id. Rooms that no longer exist are dropped

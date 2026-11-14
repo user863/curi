@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { scrollLock } from './scrollLock';
 import { Animated, AppState, FlatList, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from './ui';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -138,7 +139,26 @@ const Screen = () => {
 
   const indexOf = useCallback((key: string) => items.findIndex((i) => i.key === key), [items]);
 
+  // a sideways swipe locks the vertical scroll; when it lets go the list is put back on the card that is active
+  const [swiping, setSwiping] = useState(false);
+  const swipingRef = useRef(false);
+  const itemsRef = useRef(items);
+  const activeRef = useRef(active);
+  itemsRef.current = items;
+  activeRef.current = active;
+  useEffect(() => {
+    scrollLock.set = (on) => {
+      swipingRef.current = on;
+      setSwiping(on);
+      if (on) return;
+      const i = itemsRef.current.findIndex((it) => it.key === activeRef.current);
+      if (i >= 0) list.current?.scrollToIndex({ index: i, animated: false });
+    };
+    return () => { scrollLock.set = () => {}; };
+  }, []);
+
   const onViewable = useRef(({ viewableItems }: { viewableItems: { item: Item; isViewable: boolean }[] }) => {
+    if (swipingRef.current) return;
     const top = viewableItems.find((v) => v.isViewable);
     if (!top) return;
     const key = (top.item as Item).key;
@@ -165,7 +185,7 @@ const Screen = () => {
   }, [goto, view, items]);
 
   const ctx: Ctx = useMemo(() => ({
-    w, h, top: insets.top, bottom: insets.bottom, colour: state.colour, sound, ui,
+    w, h, top: insets.top, bottom: insets.bottom, colour: state.colour, mat: state.mat, sound, ui,
     save: (key, addOnly) => {
       const nowSaved = feed?.toggleSave(key, addOnly);
       if (nowSaved === null || nowSaved === undefined) return;
@@ -213,7 +233,7 @@ const Screen = () => {
     voices: () => { if (Platform.OS !== 'web') setSheet('voice'); }, // the web reads with the browser voice
     speakToggle: () => { reader.toggle(); },
     speaking,
-  }), [w, h, insets, state.colour, sound, ui, feed, say, setUi, indexOf, scrollTo, items.length, reader, speaking, showView]);
+  }), [w, h, insets, state.colour, state.mat, sound, ui, feed, say, setUi, indexOf, scrollTo, items.length, reader, speaking, showView]);
 
   const cardFor = useCallback((item: Item & { kind: 'card' }, on: boolean, near: boolean, under?: ReactNode) => {
     const props = { entry: item.entry, active: on, near, ctx, under };
@@ -249,7 +269,7 @@ const Screen = () => {
 
   // chrome colours follow the card on screen
   const entry = feed && active ? feed.entryOf(active) : null;
-  const bar = entry ? paletteFor(entry.card, state.colour) : tonePalette('paper');
+  const bar = entry ? paletteFor(entry.card, state.colour, state.mat) : tonePalette('paper');
   const media = entry && (entry.card.type === 'video' || entry.card.type === 'audio');
 
   if (ask) return <Onboarding rooms={ask.catalog.rooms} samples={ask.catalog.manifest.roomSamples} onDone={ask.done} />;
@@ -264,9 +284,10 @@ const Screen = () => {
         data={items}
         keyExtractor={(i) => i.key}
         renderItem={renderItem}
-        extraData={`${view}${active}${foreground}${sound}${ui}${state.colour}${speaking.key}${speaking.state}${state.saved.length}`}
+        extraData={`${view}${active}${foreground}${sound}${ui}${state.colour}${JSON.stringify(state.mat)}${speaking.key}${speaking.state}${state.saved.length}`}
         getItemLayout={(_, index) => ({ length: h, offset: h * index, index })}
         pagingEnabled
+        scrollEnabled={!swiping}
         decelerationRate="fast"
         showsVerticalScrollIndicator={false}
         viewabilityConfig={viewability}

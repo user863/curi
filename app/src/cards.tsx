@@ -17,7 +17,7 @@ import { Palette, paletteFor, tonePalette } from './theme';
 
 export type Ctx = {
   w: number; h: number; top: number; bottom: number;
-  colour: string; sound: boolean; ui: boolean;
+  colour: string; mat: Record<string, unknown>; sound: boolean; ui: boolean;
   save: (key: string, addOnly?: boolean) => void;
   info: (key: string) => void;
   toggleUi: () => void;
@@ -52,7 +52,7 @@ const creditLine = (card: any) => join([join([who(card), card.date], ', '), card
 type Props = { entry: Entry; active: boolean; near: boolean; ctx: Ctx; under?: ReactNode };
 
 const useCommon = (entry: Entry, ctx: Ctx) => {
-  const palette = useMemo(() => paletteFor(entry.card, ctx.colour), [entry.card, ctx.colour]);
+  const palette = useMemo(() => paletteFor(entry.card, ctx.colour, ctx.mat), [entry.card, ctx.colour, ctx.mat]);
   const key = entry.card.id as string;
   const onSwipe = useCallback((dir: 1 | -1) => ctx.swipe(key, dir), [ctx, key]);
   return { palette, key, onSwipe };

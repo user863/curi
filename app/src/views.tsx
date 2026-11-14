@@ -5,10 +5,12 @@ import { Image } from 'expo-image';
 import { imageSource } from './imageSource';
 import * as Search from '../../js/search.js';
 import * as Colours from '../../js/colours.js';
+import { oklab } from '../../js/colour.js';
 import { complete } from '../../js/suggest.js';
 import { deviceLang } from '../../js/vocab.js';
 import { compose, exploreScores, pickGalleries } from '../../js/explore.js';
 import { Grid, GRID_PAGE } from './Grid';
+import { ColourPicker } from './ColourPicker';
 import { tonePalette } from './theme';
 
 const P = tonePalette('paper');
@@ -101,7 +103,9 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
   const [found, setFound] = useState<number | null>(null);
   const [heroes, setHeroes] = useState<Gallery[]>([]);
   const [open, setOpen] = useState<Gallery | null>(null);
-  const [picked, setPicked] = useState<string[]>([]); // colour chips on
+  const [picked, setPicked] = useState<string[]>([]); // tones on (dark, vivid, black & white ...)
+  const [hexPick, setHexPick] = useState<string | null>(null); // the colour chosen in the picker
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [tags, setTags] = useState<[string, number][]>([]);
   const [vocab, setVocab] = useState<any>({});
   const [chosen, setChosen] = useState(''); // text a suggestion filled in, so it is not suggested again
@@ -167,14 +171,24 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
 
   const wanted = picked;
   const rest = query.trim();
-  const key = `${rest}|${wanted.join(',')}`;
-  const idle = !rest && !wanted.length;
+  const hexQ = useMemo(() => Colours.parseHex(rest), [rest]); // a typed colour, "#e85d9a": the nearest works come first
+  const hexUse = hexQ?.hex ?? hexPick; // typed, else the picker's
+  const near = useRef<Map<number, number> | null>(null); // id -> distance of the works near that colour
+  const key = `${rest}|${wanted.join(',')}|${hexPick ?? ''}`;
+  const idle = !rest && !wanted.length && !hexPick;
 
   const supply = useCallback(async (alive: () => boolean) => {
     if (idle) return wall(alive);
     if (loaded.current !== key) { // the first step of a query runs the search itself
       setFound(null);
-      let hits: { id: number; cl: number }[] | null = rest ? await Search.find(rest, catalog.searchShard) : null;
+      const words = hexQ ? hexQ.rest : rest;
+      let hits: { id: number; cl: number }[] | null = words ? await Search.find(words, catalog.searchShard) : null;
+      near.current = null;
+      if (hexUse) {
+        const column = await catalog.hues();
+        near.current = new Map(column ? Colours.nearest(column, oklab(hexUse)).map(({ id, d }: { id: number; d: number }) => [id, d] as [number, number]) : []);
+        hits = hits ? hits.filter((h) => near.current!.has(h.id)) : [...near.current].map(([id]) => ({ id, cl: catalog.clusterOf(id) }));
+      }
       if (wanted.length) {
         const byColour: Map<number, number> = Colours.hits(await catalog.colours(), wanted);
         hits = hits ? hits.filter((h) => byColour.has(h.id)) : [...byColour].map(([id, cl]) => ({ id, cl }));
@@ -182,7 +196,8 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
       if (!alive()) return [];
       setFound(hits!.length);
       const byCluster = hits!.reduce((m: Map<number, number[]>, h: any) => m.set(h.cl, [...(m.get(h.cl) ?? []), h.id]), new Map());
-      clusters.current = [...byCluster.entries()].sort((a, b) => b[1].length - a[1].length);
+      const closest = (ids: number[]) => Math.min(...ids.map((id) => near.current!.get(id) ?? 1));
+      clusters.current = [...byCluster.entries()].sort((a, b) => (near.current ? closest(a[1]) - closest(b[1]) : b[1].length - a[1].length));
       queue.current = [];
       loaded.current = key;
     }
@@ -190,7 +205,8 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
       const [cl, ids] = clusters.current.shift()!;
       const cards = [...(await catalog.getCards(ids.map((id: number) => [id, cl]))).values()].filter(Boolean) as any[];
       if (!alive()) return [];
-      queue.current.push(...cards.sort((a, b) => b.editorial.quality - a.editorial.quality));
+      const d = near.current;
+      queue.current.push(...cards.sort((a, b) => (d ? (d.get(a.n) ?? 1) - (d.get(b.n) ?? 1) : b.editorial.quality - a.editorial.quality)));
     }
     return alive() ? queue.current.splice(0, GRID_PAGE) : [];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,18 +229,17 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
           ))}
         </View>
       ) : null}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.colourRow}>
-        {[...Object.keys(Colours.HUES), ...Colours.TONES].map((c) => {
-          const on = wanted.includes(c);
-          const hex = (Colours.HUES as Record<string, string>)[c];
-          return (
-            <Pressable key={c} onPress={() => setPicked(on ? picked.filter((x) => x !== c) : [...picked, c])} style={[styles.colourChip, on && styles.colourOn]}>
-              {hex ? <View style={[styles.colourDot, { backgroundColor: hex }]} /> : null}
-              <Text style={[styles.colourText, on && { color: '#fff' }]}>{c === 'monochrome' ? 'black & white' : c}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.colourRow}>
+        <Pressable onPress={() => setPickerOpen(true)} style={[styles.colourChip, (hexUse || picked.length > 0) && styles.colourOn]}>
+          {hexUse ? <View style={[styles.colourDot, { backgroundColor: hexUse, borderWidth: 1, borderColor: '#fff8' }]} /> : null}
+          <Text style={[styles.colourText, (hexUse || picked.length > 0) && { color: '#fff' }]}>
+            {hexUse ? `${hexUse}${picked.length ? ` + ${picked.length}` : ''}` : picked.length ? `Colour · ${picked.length}` : 'Colour'}
+          </Text>
+        </Pressable>
+        {hexUse && found != null ? <Text style={styles.hexText}>{found.toLocaleString()} found</Text> : null}
+      </View>
+      <ColourPicker visible={pickerOpen} hex={hexUse} tones={picked} onClose={() => setPickerOpen(false)}
+        onApply={(hex, tones) => { setHexPick(hex); setPicked(tones); if (hexQ) setText(hexQ.rest); }} />
       {!idle && found === 0 ? <Text style={styles.note}>Nothing found.</Text> : null}
       <Grid supply={supply} resetKey={key} width={width} onPick={opened} onBroken={onBroken} header={idle && heroes.length ? <HeroRow galleries={heroes} width={width} onOpen={setOpen} /> : undefined} />
       {open ? <GalleryView catalog={catalog} gallery={open} top={top} width={width} height={height} onPick={opened} onClose={() => setOpen(null)} /> : null}
@@ -312,7 +327,7 @@ const styles = StyleSheet.create({
   suggest: { paddingHorizontal: 12, paddingBottom: 6 },
   suggestRow: { paddingVertical: 8, paddingHorizontal: 14 },
   suggestText: { fontSize: 15 },
-  colourRow: { paddingHorizontal: 12, paddingBottom: 8, gap: 6, alignItems: 'center' },
+  colourRow: { flexDirection: 'row', paddingHorizontal: 12, paddingBottom: 8, gap: 10, alignItems: 'center' },
   colourChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: '#0004' },
   colourOn: { backgroundColor: '#000', borderColor: '#000' },
   colourDot: { width: 12, height: 12, borderRadius: 6 },
@@ -328,6 +343,9 @@ const styles = StyleSheet.create({
   galleryCaption: { fontSize: 12, color: P.dim, paddingHorizontal: 16, paddingTop: 8 },
   page: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: P.bg, zIndex: 8 },
   searchTop: { paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: 'center' },
+  hexRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6, paddingHorizontal: 4 },
+  hexDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: '#0003' },
+  hexText: { fontSize: 13, color: 'rgba(0,0,0,0.6)' },
   field: { height: 34, borderRadius: 999, paddingHorizontal: 14, backgroundColor: 'rgba(0,0,0,0.07)', fontSize: 15, fontFamily: 'Switzer-Regular' },
   title: { fontSize: 24, fontWeight: '500', letterSpacing: -0.5 },
   note: { fontSize: 13, color: P.dim, paddingHorizontal: 20, paddingBottom: 8, minHeight: 22 },

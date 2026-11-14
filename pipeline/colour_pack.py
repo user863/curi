@@ -35,3 +35,21 @@ def detail(f):
     """For the info sheet: swatches as [hex without #, share %], and the scalars as words."""
     return {"pal": [[p["hex"][1:], round(p["weight"] * 100)] for p in f["palette"]],
             "tone": [w for w in buckets(f) if w not in HUES]}
+
+AB_RANGE = 0.4  # OKLab a and b are stored as signed bytes over +-0.4
+
+def hue_column(colour, max_id):
+    """Colour column for hex search: per work id six bytes, the OKLab (L u8, a and b i8) of its dominant palette colour and of its
+    most colourful one among the three biggest. All zero for a work without colour; js/colours.js nearest() reads it."""
+    def pack(p):
+        lab = p["lab"]
+        q = lambda v: max(-127, min(127, round(v / AB_RANGE * 127)))
+        return bytes([max(1, min(255, round(lab[0] * 255))), q(lab[1]) & 255, q(lab[2]) & 255])
+    out = bytearray(6 * (max_id + 1))
+    for wid, f in colour.items():
+        pal = sorted(f.get("palette") or [], key=lambda p: -p["weight"])[:3]
+        if not pal or wid > max_id:
+            continue
+        accent = max(pal, key=lambda p: math.hypot(p["lab"][1], p["lab"][2]))
+        out[6 * wid:6 * wid + 6] = pack(pal[0]) + pack(accent)
+    return bytes(out)

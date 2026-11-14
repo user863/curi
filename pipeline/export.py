@@ -234,6 +234,7 @@ def write(conn, out_dir):
         for b in colour_pack.buckets(colour[r["id"]]) if r["id"] in colour else []:
             by_bucket[b][str(r["cluster"])].append(r["id"])
     colours_hash = put(out, ".", "colours", "json", json.dumps(by_bucket, separators=(",", ":")).encode())
+    hues_hash = put(out, ".", "hues", "bin", colour_pack.hue_column(colour, max(r["id"] for r in rows)))
     search_hashes = write_search(out, rows, tags, labels)
     cent_bytes = b"".join(cent_rows[cl] for cl in cl_ids)
     cent_hash = put(out, ".", "centroids", "i8", cent_bytes)
@@ -267,7 +268,7 @@ def write(conn, out_dir):
         "clusters": {"ids": cl_ids, "centroids": f"centroids.{cent_hash}.i8", "idx": shards["idx"],
                      "cards": shards["cards"], "detail": shards["detail"], "counts": counts,
                      "quality": mean_quality, "sizes": sizes},
-        "tags": f"tags.{tags_hash}.json", "suggest": f"suggest.{suggest_hash}.json", "owners": f"owners.{owners_hash}.bin", "galleries": f"galleries.{galleries_hash}.json", "colours": f"colours.{colours_hash}.json", "vocab": f"vocab.{vocab_hash}.json", "starter": starter.starter(rows, set(flags)), "search": search_hashes, "categories": CATEGORIES, "roomOrder": room_order,
+        "tags": f"tags.{tags_hash}.json", "suggest": f"suggest.{suggest_hash}.json", "owners": f"owners.{owners_hash}.bin", "galleries": f"galleries.{galleries_hash}.json", "colours": f"colours.{colours_hash}.json", "hues": f"hues.{hues_hash}.bin", "vocab": f"vocab.{vocab_hash}.json", "starter": starter.starter(rows, set(flags)), "search": search_hashes, "categories": CATEGORIES, "roomOrder": room_order,
         "rooms": {r: labels[r] for r in room_order}, "roomCategories": cats_by_room,
         "roomCentroids": centroids, "roomSamples": samples, "tombstones": tombstones,
     }
