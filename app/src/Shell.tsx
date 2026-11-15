@@ -25,8 +25,6 @@ export const Shell = ({ palette, width, swipeable, under, onTap, onHold, onSwipe
   const x = useRef(new Animated.Value(0)).current;
   const last = useRef(0);
   const live = useRef(false);
-  const more = x.interpolate({ inputRange: [0, SWIPE_PX], outputRange: [0, 1], extrapolate: 'clamp' });
-  const less = x.interpolate({ inputRange: [-SWIPE_PX, 0], outputRange: [1, 0], extrapolate: 'clamp' });
   const rotate = x.interpolate({ inputRange: [-width, width], outputRange: ['-14deg', '14deg'] });
   const far = Math.max(SWIPE_PX, width * 0.22);
 
@@ -76,12 +74,6 @@ export const Shell = ({ palette, width, swipeable, under, onTap, onHold, onSwipe
       >
         {children}
       </Pressable>
-      <Animated.View pointerEvents="none" style={[styles.tag, { opacity: more, left: 16 }]}>
-        <Text style={{ color: palette.fg, fontSize: 17, fontWeight: '500' }}>More like this</Text>
-      </Animated.View>
-      <Animated.View pointerEvents="none" style={[styles.tag, { opacity: less, right: 16 }]}>
-        <Text style={{ color: palette.fg, fontSize: 17, fontWeight: '500' }}>Fewer like this</Text>
-      </Animated.View>
     </Animated.View>
     </View>
   );
@@ -89,5 +81,4 @@ export const Shell = ({ palette, width, swipeable, under, onTap, onHold, onSwipe
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  tag: { position: 'absolute', top: 90, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 999, backgroundColor: 'rgba(128,128,128,0.25)' },
 });

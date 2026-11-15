@@ -7,7 +7,7 @@ import collections, hashlib, json, math, re, shutil, struct, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
-from . import cluster, colour_pack, creators, quality_v2, starter, vocab
+from . import cluster, colour_pack, creators, keywords, quality_v2, starter, vocab
 from .categories import CATEGORIES
 from .embed import MODEL as SEM_MODEL, to_int8
 from . import blocks, dates
@@ -228,6 +228,7 @@ def write(conn, out_dir):
     # Tags to complete in the search bar: [slug, works], most used first.
     used = sorted(((s, sum(map(len, by.values()))) for s, by in postings.items() if not s.startswith("gallery-")), key=lambda x: (-x[1], x[0]))
     suggest_hash = put(out, ".", "suggest", "json", json.dumps([[s, n] for s, n in used if n >= SUGGEST_MIN], ensure_ascii=False, separators=(",", ":")).encode())
+    keywords_hash = put(out, ".", "keywords", "json", json.dumps(keywords.pick(rows, tags), ensure_ascii=False, separators=(",", ":")).encode())
     # Colour buckets for Discover: bucket -> {cluster: [ids]}, intersected on the client.
     by_bucket = collections.defaultdict(lambda: collections.defaultdict(list))
     for r in rows:
@@ -268,7 +269,7 @@ def write(conn, out_dir):
         "clusters": {"ids": cl_ids, "centroids": f"centroids.{cent_hash}.i8", "idx": shards["idx"],
                      "cards": shards["cards"], "detail": shards["detail"], "counts": counts,
                      "quality": mean_quality, "sizes": sizes},
-        "tags": f"tags.{tags_hash}.json", "suggest": f"suggest.{suggest_hash}.json", "owners": f"owners.{owners_hash}.bin", "galleries": f"galleries.{galleries_hash}.json", "colours": f"colours.{colours_hash}.json", "hues": f"hues.{hues_hash}.bin", "vocab": f"vocab.{vocab_hash}.json", "starter": starter.starter(rows, set(flags)), "search": search_hashes, "categories": CATEGORIES, "roomOrder": room_order,
+        "tags": f"tags.{tags_hash}.json", "suggest": f"suggest.{suggest_hash}.json", "keywords": f"keywords.{keywords_hash}.json", "owners": f"owners.{owners_hash}.bin", "galleries": f"galleries.{galleries_hash}.json", "colours": f"colours.{colours_hash}.json", "hues": f"hues.{hues_hash}.bin", "vocab": f"vocab.{vocab_hash}.json", "starter": starter.starter(rows, set(flags)), "search": search_hashes, "categories": CATEGORIES, "roomOrder": room_order,
         "rooms": {r: labels[r] for r in room_order}, "roomCategories": cats_by_room,
         "roomCentroids": centroids, "roomSamples": samples, "tombstones": tombstones,
     }

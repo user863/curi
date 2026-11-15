@@ -112,6 +112,7 @@ export const loadCatalog = async (base = 'data/pack', fetcher = fetch) => {
   let galleriesOnce = null;
   let coloursOnce = null;
   let huesOnce = null;
+  let keywordsOnce = null;
   let vocabOnce = null;
   let suggestOnce = null;
   const searchShards = new Map();
@@ -159,6 +160,11 @@ export const loadCatalog = async (base = 'data/pack', fetcher = fetch) => {
     colours: () => {
       coloursOnce ??= manifest.colours ? get(`${base}/${manifest.colours}`, 'json') : Promise.resolve({});
       return coloursOnce;
+    },
+    // Tag slugs of the best-rated works, best first; [] in packs without them.
+    keywords: () => {
+      keywordsOnce ??= manifest.keywords ? get(`${base}/${manifest.keywords}`, 'json') : Promise.resolve([]);
+      return keywordsOnce;
     },
     // Colour column for hex search: ArrayBuffer, six bytes per work id; null in packs without it.
     hues: () => {

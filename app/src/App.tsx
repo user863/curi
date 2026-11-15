@@ -18,7 +18,8 @@ import { SavedView, SearchView, SimilarView, SimplePage } from './views';
 import { VOICES } from '../../js/speech.js';
 import { flush, getState, update, useAppState } from './store';
 import { migration, withBit } from '../../js/store.js';
-import { paletteFor, tonePalette } from './theme';
+import { paletteFor, SUN, tonePalette } from './theme';
+import Svg, { Path } from 'react-native-svg';
 
 const UI_HIDE_MS = 4000;
 const INTRO_MS = 2600; // controls show at launch, then slide away
@@ -48,14 +49,12 @@ const Screen = () => {
   const [foreground, setForeground] = useState(true);
   const [ui, setUiState] = useState(true);
   const [sound, setSound] = useState(true);
-  const [toast, setToast] = useState('');
   const [sheet, setSheet] = useState<null | 'settings' | 'voice' | { info: any }>(null);
   const [view, setViewState] = useState<null | 'discover' | 'saved' | 'similar' | 'chat' | 'profile'>(null); // a view over the feed; the feed stays where it was
   const [goto, setGoto] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState<{ key: string | null; state: string | null }>({ key: null, state: null });
   const uiTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const logoLit = useRef(new Animated.Value(0)).current; // the saved symbol lights yellow when a work is saved, even with the bar hidden
   const hiddenAt = useRef(0);
 
   const reader = useMemo(() => createReader((key, s) => setSpeaking(s ? { key, state: s } : (cur) => (cur.key === key ? { key: null, state: null } : cur))), []);
@@ -66,12 +65,10 @@ const Screen = () => {
     if (on) uiTimer.current = setTimeout(() => setUiState(false), ms);
   }, []);
 
-  const say = useCallback((msg: string, ms = 1600) => {
-    setToast(msg);
-    toastOpacity.setValue(1);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(), ms);
-  }, [toastOpacity]);
+  const lightLogo = useCallback(() => {
+    logoLit.setValue(1);
+    Animated.timing(logoLit, { toValue: 0, duration: 1100, delay: 250, useNativeDriver: true }).start();
+  }, [logoLit]);
 
   // start
   useEffect(() => {
@@ -189,7 +186,7 @@ const Screen = () => {
     save: (key, addOnly) => {
       const nowSaved = feed?.toggleSave(key, addOnly);
       if (nowSaved === null || nowSaved === undefined) return;
-      say(nowSaved ? 'Saved' : 'Removed');
+      if (nowSaved) lightLogo();
     },
     info: async (key) => {
       const entry = feed?.entryOf(key);
@@ -212,7 +209,6 @@ const Screen = () => {
       const i = indexOf(key);
       if (!feed || i < 0) return;
       feed.markJudged();
-      say(dir > 0 ? 'More like this' : 'Fewer like this');
       const next = items[i + 1];
       if (!next) { feed.feedback(key, dir > 0 ? 'more' : 'less'); return; }
       scrollTo(i + 1, false); // the card beneath was ranked already: it is the one that appears
@@ -233,7 +229,7 @@ const Screen = () => {
     voices: () => { if (Platform.OS !== 'web') setSheet('voice'); }, // the web reads with the browser voice
     speakToggle: () => { reader.toggle(); },
     speaking,
-  }), [w, h, insets, state.colour, state.mat, sound, ui, feed, say, setUi, indexOf, scrollTo, items.length, reader, speaking, showView]);
+  }), [w, h, insets, state.colour, state.mat, sound, ui, feed, lightLogo, setUi, indexOf, scrollTo, items.length, reader, speaking, showView]);
 
   const cardFor = useCallback((item: Item & { kind: 'card' }, on: boolean, near: boolean, under?: ReactNode) => {
     const props = { entry: item.entry, active: on, near, ctx, under };
@@ -301,7 +297,11 @@ const Screen = () => {
         <View style={styles.row}>
           <Text style={[styles.mark, { color: bar.barFg }]}>Curi</Text>
           <View style={styles.nav}>
-            <Pressable hitSlop={10} onPress={() => showView(view === 'saved' ? null : 'saved')}><Text style={[styles.navText, { color: bar.barFg }]}>Saved{state.saved.length ? ` (${state.saved.length})` : ''}</Text></Pressable>
+            <Pressable hitSlop={12} accessibilityLabel="Saved" onPress={() => showView(view === 'saved' ? null : 'saved')}>
+              <Svg width={20} height={20} viewBox="0 0 24 24">
+                <Path d="M6 3h12v18l-6-4.5L6 21z" fill={state.saved.length ? bar.barFg : 'none'} stroke={bar.barFg} strokeWidth={1.8} strokeLinejoin="round" />
+              </Svg>
+            </Pressable>
             <Pressable hitSlop={10} onPress={() => setSheet('settings')}><Text style={[styles.navText, { color: bar.barFg }]}>Settings</Text></Pressable>
           </View>
         </View>
@@ -311,7 +311,17 @@ const Screen = () => {
           <Pressable style={styles.tool} onPress={() => { setSound(!sound); setUi(true); }}><Text style={styles.toolText}>{sound ? 'Mute' : 'Sound'}</Text></Pressable>
         </View>
       ) : null}
-      <Animated.View pointerEvents="none" style={[styles.toast, { opacity: toastOpacity, bottom: insets.bottom + 110 }]}><Text style={styles.toastText}>{toast}</Text></Animated.View>
+      <View pointerEvents="none" style={[styles.bar, { paddingTop: insets.top }]}>
+        <View style={styles.row}>
+          <Text style={[styles.mark, { opacity: 0 }]}>Curi</Text>
+          <View style={styles.nav}>
+            <Animated.View style={{ opacity: logoLit, transform: [{ scale: logoLit.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] }}>
+              <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M6 3h12v18l-6-4.5L6 21z" fill={SUN} stroke={SUN} strokeWidth={1.8} strokeLinejoin="round" /></Svg>
+            </Animated.View>
+            <Text style={[styles.navText, { opacity: 0 }]}>Settings</Text>
+          </View>
+        </View>
+      </View>
       <SettingsSheet visible={sheet === 'settings'} onClose={() => setSheet(null)} feed={feed} state={state} events={events} />
       {view === 'discover' ? (
         <SearchView catalog={feed.catalog} profile={state.profile} top={insets.top + 8} width={w} height={h} onPick={showWork} onBroken={(n) => update({ bad: withBit(getState().bad, n) })} />
@@ -371,6 +381,4 @@ const styles = StyleSheet.create({
   tools: { position: 'absolute', right: 14, gap: 8, alignItems: 'flex-end' },
   tool: { height: 40, paddingHorizontal: 16, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.78)', justifyContent: 'center' },
   toolText: { color: '#fff', fontSize: 13, fontWeight: '500' },
-  toast: { position: 'absolute', alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.82)' },
-  toastText: { color: '#fff', fontSize: 14 },
 });

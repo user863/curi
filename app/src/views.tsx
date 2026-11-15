@@ -7,7 +7,7 @@ import * as Search from '../../js/search.js';
 import * as Colours from '../../js/colours.js';
 import { oklab } from '../../js/colour.js';
 import { complete } from '../../js/suggest.js';
-import { deviceLang } from '../../js/vocab.js';
+import { deviceLang, tagLabel } from '../../js/vocab.js';
 import { compose, exploreScores, pickGalleries } from '../../js/explore.js';
 import { Grid, GRID_PAGE } from './Grid';
 import { ColourPicker } from './ColourPicker';
@@ -109,9 +109,20 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
   const [tags, setTags] = useState<[string, number][]>([]);
   const [vocab, setVocab] = useState<any>({});
   const [chosen, setChosen] = useState(''); // text a suggestion filled in, so it is not suggested again
+  const [tryThese, setTryThese] = useState<string[]>([]); // keywords of the best-rated works; a new draw each time search opens
   useEffect(() => {
     let alive = true;
     Promise.all([catalog.suggest(), catalog.vocab()]).then(([t, v]) => { if (alive) { setTags(t); setVocab(v); } }).catch(() => {});
+    return () => { alive = false; };
+  }, [catalog]);
+  useEffect(() => {
+    let alive = true;
+    catalog.keywords().then((list: string[]) => {
+      if (!alive) return;
+      const pool = [...list];
+      for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+      setTryThese(pool.slice(0, 10));
+    }).catch(() => {});
     return () => { alive = false; };
   }, [catalog]);
   const suggestions = useMemo(() => (text === chosen ? [] : complete(tags, vocab, deviceLang(), text)), [tags, vocab, text, chosen]);
@@ -187,7 +198,8 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
       if (hexUse) {
         const column = await catalog.hues();
         near.current = new Map(column ? Colours.nearest(column, oklab(hexUse)).map(({ id, d }: { id: number; d: number }) => [id, d] as [number, number]) : []);
-        hits = hits ? hits.filter((h) => near.current!.has(h.id)) : [...near.current].map(([id]) => ({ id, cl: catalog.clusterOf(id) }));
+        const owners: Uint16Array = await catalog.owners(); // work id -> cluster for every work; clusterOf only knows the clusters already loaded
+        hits = hits ? hits.filter((h) => near.current!.has(h.id)) : [...near.current].map(([id]) => ({ id, cl: owners[id] })).filter((h) => h.cl !== undefined && h.cl !== 0xFFFF);
       }
       if (wanted.length) {
         const byColour: Map<number, number> = Colours.hits(await catalog.colours(), wanted);
@@ -197,16 +209,17 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
       setFound(hits!.length);
       const byCluster = hits!.reduce((m: Map<number, number[]>, h: any) => m.set(h.cl, [...(m.get(h.cl) ?? []), h.id]), new Map());
       const closest = (ids: number[]) => Math.min(...ids.map((id) => near.current!.get(id) ?? 1));
-      clusters.current = [...byCluster.entries()].sort((a, b) => (near.current ? closest(a[1]) - closest(b[1]) : b[1].length - a[1].length));
+      // the clusters holding the most hits first, so a page of results needs few shard downloads; near a colour, the closer one wins a tie
+      clusters.current = [...byCluster.entries()].sort((a, b) => b[1].length - a[1].length || (near.current ? closest(a[1]) - closest(b[1]) : 0));
       queue.current = [];
       loaded.current = key;
     }
     while (queue.current.length < GRID_PAGE && clusters.current.length) {
-      const [cl, ids] = clusters.current.shift()!;
-      const cards = [...(await catalog.getCards(ids.map((id: number) => [id, cl]))).values()].filter(Boolean) as any[];
+      const batch = clusters.current.splice(0, 3); // a few shards at once
+      const got = await Promise.all(batch.map(async ([cl, ids]) => [...(await catalog.getCards(ids.map((id: number) => [id, cl]))).values()].filter(Boolean) as any[]));
       if (!alive()) return [];
       const d = near.current;
-      queue.current.push(...cards.sort((a, b) => (d ? (d.get(a.n) ?? 1) - (d.get(b.n) ?? 1) : b.editorial.quality - a.editorial.quality)));
+      queue.current.push(...got.flat().sort((a, b) => (d ? (d.get(a.n) ?? 1) - (d.get(b.n) ?? 1) : b.editorial.quality - a.editorial.quality)));
     }
     return alive() ? queue.current.splice(0, GRID_PAGE) : [];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,6 +251,18 @@ export const SearchView = ({ catalog, profile, top, width, height, onPick, onBro
         </Pressable>
         {hexUse && found != null ? <Text style={styles.hexText}>{found.toLocaleString()} found</Text> : null}
       </View>
+      {!text && tryThese.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={styles.tryRow}>
+          {tryThese.map((slug) => {
+            const label = tagLabel(vocab, slug, deviceLang());
+            return (
+              <Pressable key={slug} onPress={() => { setChosen(label); setText(label); }} style={styles.tryChip}>
+                <Text style={styles.tryText}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
       <ColourPicker visible={pickerOpen} hex={hexUse} tones={picked} onClose={() => setPickerOpen(false)}
         onApply={(hex, tones) => { setHexPick(hex); setPicked(tones); if (hexQ) setText(hexQ.rest); }} />
       {!idle && found === 0 ? <Text style={styles.note}>Nothing found.</Text> : null}
@@ -343,6 +368,9 @@ const styles = StyleSheet.create({
   galleryCaption: { fontSize: 12, color: P.dim, paddingHorizontal: 16, paddingTop: 8 },
   page: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: P.bg, zIndex: 8 },
   searchTop: { paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: 'center' },
+  tryRow: { paddingHorizontal: 12, paddingBottom: 8, gap: 6, alignItems: 'center' },
+  tryChip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.07)' },
+  tryText: { fontSize: 14 },
   hexRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6, paddingHorizontal: 4 },
   hexDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: '#0003' },
   hexText: { fontSize: 13, color: 'rgba(0,0,0,0.6)' },

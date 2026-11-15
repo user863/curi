@@ -5,7 +5,7 @@ export type Palette = { bg: string; fg: string; dim: string; accent: string; bar
 
 const GREY = '#ececec';
 const SKY = '#3f6e96';
-const SUN = '#e3ac1c';
+export const SUN = '#e3ac1c';
 const alpha = (rgb: string, a: number) => `rgba(${rgb},${a})`;
 
 const TONES: Record<Tone, Palette> = {

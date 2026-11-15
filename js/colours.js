@@ -33,7 +33,7 @@ export const parseHex = (query) => {
 // The pack's colour column (pipeline/export.py): per work id six bytes, OKLab of its dominant colour and of its most colourful
 // one (L u8, a and b i8 over +-0.4). L of 0 means no colour. Returns the works nearest to a colour, closest first.
 const AB = 0.4 / 127;
-export const nearest = (column, lab, limit = 1500, within = 0.16) => {
+export const nearest = (column, lab, limit = 800, within = 0.16) => {
   const u = new Uint8Array(column);
   const s = new Int8Array(column);
   const out = [];
