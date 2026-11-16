@@ -72,7 +72,7 @@ export const ImageCard = memo(({ entry, active, ctx, under }: Props) => {
     else tap.current = setTimeout(ctx.toggleUi, 260);
   };
   return (
-    <Shell palette={palette} width={ctx.w} swipeable={active} under={under} onTap={onTap} onHold={(_, on) => on && ctx.similar(key)} onSwipe={onSwipe}>
+    <Shell palette={palette} width={ctx.w} swipeable={active} under={under} onTap={onTap} onHold={(_, on) => on && !grip.held && ctx.similar(key)} onSwipe={onSwipe}>
       <View style={[styles.stage, { top: ctx.top + 14, bottom: ctx.bottom + 62 }]}>
         <Zoom width={ctx.w} height={stageH} active={active}>
           <Image
@@ -124,6 +124,16 @@ export const PassageCard = memo(({ entry, active, ctx, under }: Props) => {
     }
     return undefined;
   }, [mine, pulse]);
+
+  // Autoplay: a passage is read aloud once it is the card on screen, unless the sound is muted. Stopping it stays stopped until the card is left.
+  const auto = useRef(false);
+  useEffect(() => {
+    if (!active) { auto.current = false; return undefined; }
+    if (auto.current || !ctx.sound) return undefined;
+    auto.current = true;
+    const t = setTimeout(() => { if (ctx.speaking.key !== key) ctx.speak(key, card.text.body, card.text.verse); }, 450); // after the card has settled
+    return () => clearTimeout(t);
+  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onTap = (_: Zone, double: boolean) => {
     clearTimeout(tap.current);

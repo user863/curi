@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { scrollLock } from './scrollLock';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Animated, AppState, FlatList, Linking, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from './ui';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -382,7 +383,7 @@ const Screen = () => {
 export default function App() {
   const fonts = useSwitzer();
   if (!fonts) return <View style={[styles.center, { backgroundColor: '#000' }]}><Loader /></View>;
-  return <SafeAreaProvider><Screen /></SafeAreaProvider>;
+  return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><Screen /></SafeAreaProvider></GestureHandlerRootView>;
 }
 
 const styles = StyleSheet.create({

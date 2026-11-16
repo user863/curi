@@ -29,7 +29,7 @@ export const Shell = ({ palette, width, swipeable, under, onTap, onHold, onSwipe
   const far = Math.max(SWIPE_PX, width * 0.22);
 
   const pan = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponderCapture: (_, g) => swipeable && !grip.held && Math.abs(g.dx) > 10 && Math.abs(g.dx) > 1.5 * Math.abs(g.dy),
+    onMoveShouldSetPanResponderCapture: (e, g) => swipeable && !grip.held && e.nativeEvent.touches.length < 2 && Math.abs(g.dx) > 10 && Math.abs(g.dx) > 1.5 * Math.abs(g.dy),
     onPanResponderGrant: () => { live.current = true; scrollLock.set(true); },
     onPanResponderMove: (_, g) => {
       x.setValue(g.dx);
