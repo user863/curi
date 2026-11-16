@@ -43,21 +43,29 @@ private func downsample(_ data: Data, maxPixel: CGFloat) -> UIImage? {
     return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary).map { UIImage(cgImage: $0) }
 }
 
+// The last list and picture are kept on disk, so a failed download shows yesterday's state instead of an empty widget.
+private let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+
+private func fetch(_ url: URL, kept name: String) async -> Data? {
+    let file = cache.appendingPathComponent(name)
+    if let (data, response) = try? await URLSession.shared.data(from: url), (response as? HTTPURLResponse)?.statusCode == 200 {
+        try? data.write(to: file)
+        return data
+    }
+    return try? Data(contentsOf: file)
+}
+
 private func load(for date: Date) async -> PictureEntry {
-    do {
-        let (data, _) = try await URLSession.shared.data(from: dailyURL)
-        let picks = try JSONDecoder().decode(Daily.self, from: data).picks
-        guard !picks.isEmpty else { return PictureEntry(date: date, pick: nil, image: nil) }
-        let day = Calendar.current.ordinality(of: .day, in: .era, for: date) ?? 0
-        let pick = picks[day % picks.count]
-        var image: UIImage?
-        if let url = URL(string: pick.image), let (bytes, _) = try? await URLSession.shared.data(from: url) {
-            image = downsample(bytes, maxPixel: 900)
-        }
-        return PictureEntry(date: date, pick: pick, image: image)
-    } catch {
+    guard let data = await fetch(dailyURL, kept: "daily.json"), let picks = try? JSONDecoder().decode(Daily.self, from: data).picks, !picks.isEmpty else {
         return PictureEntry(date: date, pick: nil, image: nil)
     }
+    let day = Calendar.current.ordinality(of: .day, in: .era, for: date) ?? 0
+    let pick = picks[day % picks.count]
+    var image: UIImage?
+    if let url = URL(string: pick.image), let bytes = await fetch(url, kept: "picture-\(pick.id).jpg") {
+        image = downsample(bytes, maxPixel: 900)
+    }
+    return PictureEntry(date: date, pick: pick, image: image)
 }
 
 struct Provider: TimelineProvider {
@@ -72,7 +80,7 @@ struct Provider: TimelineProvider {
             let now = Date()
             let entry = await load(for: now)
             let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now)) ?? now.addingTimeInterval(86400)
-            completion(Timeline(entries: [entry], policy: .after(entry.pick == nil ? now.addingTimeInterval(1800) : midnight)))
+            completion(Timeline(entries: [entry], policy: .after(entry.image == nil ? now.addingTimeInterval(300) : midnight)))
         }
     }
 }
@@ -92,7 +100,11 @@ struct PictureView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
             } else {
-                Text("Curi").font(.title3.weight(.medium)).foregroundStyle(ink).frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 2) {
+                    Text(entry.pick?.title ?? "Curi").font(.headline).lineLimit(3).multilineTextAlignment(.center)
+                    if let creator = entry.pick?.creator { Text(creator).font(.caption).opacity(0.7) }
+                }
+                .foregroundStyle(ink).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             if !small, let pick = entry.pick {
                 VStack(alignment: .leading, spacing: 1) {
