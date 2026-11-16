@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { scrollLock } from './scrollLock';
-import { Animated, AppState, FlatList, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, AppState, FlatList, Linking, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from './ui';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -133,6 +133,23 @@ const Screen = () => {
   }, [feed, showView]);
 
   const [like, setLike] = useState<number | null>(null); // the work whose neighbours are shown
+
+  // The home-screen widget opens a picture with com.johannbraun.commonplace://work/<id>: shown in the feed like a work picked in search.
+  const startUrl = useRef(true);
+  const showWorkRef = useRef(showWork);
+  showWorkRef.current = showWork;
+  useEffect(() => {
+    if (!feed) return;
+    const open = async (url: string | null | undefined) => {
+      const id = Number(/\/\/work\/(\d+)/.exec(url ?? '')?.[1]);
+      if (!id) return;
+      const owners: Uint16Array = await feed.catalog.owners();
+      if (owners[id] !== undefined && owners[id] !== 0xFFFF) showWorkRef.current(id, owners[id]);
+    };
+    if (startUrl.current) { startUrl.current = false; Linking.getInitialURL().then(open).catch(() => {}); }
+    const sub = Linking.addEventListener('url', ({ url }) => { open(url); });
+    return () => sub.remove();
+  }, [feed]);
 
   const indexOf = useCallback((key: string) => items.findIndex((i) => i.key === key), [items]);
 

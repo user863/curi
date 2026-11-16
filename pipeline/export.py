@@ -3,11 +3,11 @@ The client downloads the manifest and the cluster directory (centroids), then on
 per cluster an index shard (typed arrays), a card shard (display fields) and a detail shard (rights, spec rows).
 Shard names contain a content hash, so they are immutable and cacheable, and an update changes only the
 shards whose works changed."""
-import collections, hashlib, json, math, re, shutil, struct, unicodedata
+import collections, hashlib, json, math, re, shutil, struct, subprocess, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
-from . import cluster, colour_pack, creators, keywords, quality_v2, starter, vocab
+from . import cluster, colour_pack, creators, daily, keywords, quality_v2, starter, vocab
 from .categories import CATEGORIES
 from .embed import MODEL as SEM_MODEL, to_int8
 from . import blocks, dates
@@ -229,6 +229,9 @@ def write(conn, out_dir):
     used = sorted(((s, sum(map(len, by.values()))) for s, by in postings.items() if not s.startswith("gallery-")), key=lambda x: (-x[1], x[0]))
     suggest_hash = put(out, ".", "suggest", "json", json.dumps([[s, n] for s, n in used if n >= SUGGEST_MIN], ensure_ascii=False, separators=(",", ":")).encode())
     keywords_hash = put(out, ".", "keywords", "json", json.dumps(keywords.pick(rows, tags), ensure_ascii=False, separators=(",", ":")).encode())
+    # Picture of the day for the home-screen widget: plain daily.json (the widget cannot read the manifest), matched colours by node.
+    (out / "daily.json").write_text(json.dumps({"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "picks": daily.pick(rows, media)}, ensure_ascii=False))
+    subprocess.run(["node", str(Path(__file__).resolve().parent.parent / "tools" / "daily_mat.mjs"), str(out / "daily.json")], check=True)
     # Colour buckets for Discover: bucket -> {cluster: [ids]}, intersected on the client.
     by_bucket = collections.defaultdict(lambda: collections.defaultdict(list))
     for r in rows:
