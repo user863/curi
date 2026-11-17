@@ -7,6 +7,13 @@ const RATE = { prose: 0.98, verse: 0.9 };
 export const VOICES = ['af_alloy', 'af_aoede', 'af_bella', 'af_heart', 'af_jessica', 'af_kore', 'af_nicole', 'af_nova', 'af_river', 'af_sarah', 'af_sky',
   'am_adam', 'am_echo', 'am_eric', 'am_fenrir', 'am_liam', 'am_michael', 'am_onyx', 'am_puck', 'am_santa',
   'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily', 'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis'];
+// Kokoro's English front end says the article "a" as the letter ("ay") whenever its tagger does not call the word a determiner,
+// which happens often in verse and at the start of a chunk. Marked with its own phonemes it is the usual weak "uh". A letter
+// ("vitamin A", "Plan A", "A.") is left alone. Only for the Kokoro voice: the system voice would read the marks out.
+const LETTER_AFTER = /\b(?:vitamin|plan|grade|type|class|chapter|act|section|part|size|model|route|exhibit|appendix|schedule|article|book|group|team|level|category|blood|hepatitis|channel|option|scene|point|rank|letter|stage|step|side|form)\s+$/i;
+export const kokoroArticles = (text) => String(text).replace(/(^|[^\p{L}\p{N}_'’\-[(/])([aA])(?=\s+\p{L})/gu,
+  (m, before, a, at, whole) => (LETTER_AFTER.test(whole.slice(0, at + before.length)) ? m : `${before}[${a}](/ɐ/)`));
+
 const MAX_CHARS = 200; // Kokoro takes up to about 500 phonemes at a time, and memory grows with the length
 const GAP_MS = { sentence: 140, line: 260, stanza: 700 };
 

@@ -1,12 +1,12 @@
 import { Platform } from 'react-native';
 import Native from '../modules/commonplace-speech';
-import { speaker } from '../../js/speech.js';
+import { kokoroArticles, speaker } from '../../js/speech.js';
 
 // Read-aloud for passages: the shared speaker (js/speech.js) drives the native Kokoro module through this bridge.
 // On the web there is no bridge: the speaker falls back to speechSynthesis.
 const bridge = Platform.OS === 'web' ? undefined : {
   postMessage: (m: any) => {
-    if (m.op === 'read') Native.read(m.id, m.voice, m.chunks.map((c: any) => c.t), m.chunks.map((c: any) => c.gap));
+    if (m.op === 'read') Native.read(m.id, m.voice, m.chunks.map((c: any) => kokoroArticles(c.t)), m.chunks.map((c: any) => c.gap));
     else Native.stop();
   },
 };

@@ -32,10 +32,10 @@ export const Zoom = ({ width, height, active, children }: Props) => {
   };
 
   useEffect(() => {
-    if (active) return;
-    scale.value = 1; tx.value = 0; ty.value = 0; zoomed.value = false; // leaving the card puts the picture back
+    // A card always starts, and is left, fully zoomed out: the whole picture in view.
+    scale.value = 1; tx.value = 0; ty.value = 0; zoomed.value = false;
     hold(false);
-  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active, width, height]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pinch = usePinchGesture({
     onTouchesDown: (e) => { 'worklet'; if (e.numberOfTouches > 1) scheduleOnRN(hold, true); },

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chunks, limit, VOICES } from '../js/speech.js';
+import { chunks, kokoroArticles, limit, VOICES } from '../js/speech.js';
 
 const prose = 'Begin the morning by saying to thyself, I shall meet the busybody. All these things happen to them by reason of ignorance! Is it not so?';
 const verse = 'Success is counted sweetest\nBy those who ne\'er succeed.\nTo comprehend a nectar\nRequires sorest need.\n\nNot one of all the purple host\nWho took the flag to-day';
@@ -36,4 +36,12 @@ test('the voice list matches the voices bundled in the app', () => {
   assert.equal(VOICES.length, 28);
   assert.equal(new Set(VOICES).size, 28);
   assert.ok(VOICES.every((v) => /^(af|am|bf|bm)_[a-z]+$/.test(v)));
+});
+
+test('the article "a" gets its weak sound, a letter keeps its name', () => {
+  assert.equal(kokoroArticles('A man and a dog'), '[A](/ɐ/) man and [a](/ɐ/) dog');
+  assert.equal(kokoroArticles('To comprehend a nectar'), 'To comprehend [a](/ɐ/) nectar');
+  assert.equal(kokoroArticles('Vitamin A is found in liver; Plan A failed.'), 'Vitamin A is found in liver; Plan A failed.');
+  assert.equal(kokoroArticles('J. A. Smith, a. m.'), 'J. A. Smith, a. m.');
+  assert.equal(kokoroArticles('data, area, "a" quote'), 'data, area, "a" quote');
 });

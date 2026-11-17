@@ -65,6 +65,7 @@ export const ImageCard = memo(({ entry, active, ctx, under }: Props) => {
   const { palette, key, onSwipe } = useCommon(entry, ctx);
   const [failed, setFailed] = useState(false);
   const stageH = ctx.h - (ctx.top + 14) - (ctx.bottom + 62);
+  const stageW = ctx.w - 28; // the stage is inset 14 on each side; the picture is exactly as wide, so it is whole in view
   const tap = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onTap = (_: Zone, double: boolean) => {
     clearTimeout(tap.current);
@@ -74,12 +75,12 @@ export const ImageCard = memo(({ entry, active, ctx, under }: Props) => {
   return (
     <Shell palette={palette} width={ctx.w} swipeable={active} under={under} onTap={onTap} onHold={(_, on) => on && !grip.held && ctx.similar(key)} onSwipe={onSwipe}>
       <View style={[styles.stage, { top: ctx.top + 14, bottom: ctx.bottom + 62 }]}>
-        <Zoom width={ctx.w} height={stageH} active={active}>
+        <Zoom width={stageW} height={stageH} active={active}>
           <Image
             source={imageSource(card.media.url)}
             contentFit="contain"
             transition={250}
-            style={{ width: ctx.w, height: stageH }}
+            style={{ width: stageW, height: stageH }}
             accessibilityLabel={`${card.title}, ${card.creator}, ${card.date}`}
             onError={() => { setFailed(true); ctx.unplayable(key); }}
           />

@@ -1296,5 +1296,186 @@
     "workers": 8,
     "take": 12000,
     "max_per_group": 5000
+  },
+  "flickr": {
+    "name": "flickr",
+    "licenses": [
+      "cc0",
+      "pdm",
+      "by",
+      "by-sa"
+    ],
+    "max_requests": 150,
+    "pages": 4,
+    "take": 2000,
+    "max_per_group": 600,
+    "topics": [
+      {
+        "name": "rave flyer",
+        "room": "drawings",
+        "words": [
+          "rave",
+          "flyer",
+          "flier"
+        ],
+        "queries": [
+          "rave flyer",
+          "rave poster",
+          "techno party flyer",
+          "club flyer"
+        ]
+      },
+      {
+        "name": "gig poster",
+        "room": "drawings",
+        "words": [
+          "poster",
+          "gig",
+          "concert"
+        ],
+        "queries": [
+          "gig poster",
+          "screen printed poster",
+          "screenprint poster",
+          "concert poster"
+        ]
+      },
+      {
+        "name": "zine",
+        "room": "words",
+        "words": [
+          "zine",
+          "fanzine",
+          "minicomic"
+        ],
+        "queries": [
+          "zine",
+          "fanzine",
+          "zine cover"
+        ]
+      },
+      {
+        "name": "matchbox label",
+        "room": "drawings",
+        "words": [
+          "match",
+          "label"
+        ],
+        "queries": [
+          "matchbox label",
+          "matchbook cover",
+          "matchbox",
+          "match label"
+        ]
+      }
+    ]
+  },
+  "flickr_pages": {
+    "delay": 3.0,
+    "max_pages": 200,
+    "take": 6000,
+    "max_per_group": 5000,
+    "sources": [
+      {
+        "name": "villalobosjayse NYC",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/villalobosjayse/albums/72157633465961923/",
+        "topic": "rave flyer",
+        "room": "drawings",
+        "tags": [
+          "rave flyer"
+        ]
+      },
+      {
+        "name": "villalobosjayse LA",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/villalobosjayse/albums/72157632993726822/",
+        "topic": "rave flyer",
+        "room": "drawings",
+        "tags": [
+          "rave flyer"
+        ]
+      },
+      {
+        "name": "technochick",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/technochick/albums/1690469/",
+        "topic": "rave flyer",
+        "room": "drawings",
+        "tags": [
+          "rave flyer"
+        ]
+      },
+      {
+        "name": "7987266 love parade",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/7987266@N06/albums/72157632726940458/",
+        "topic": "rave flyer",
+        "room": "drawings",
+        "tags": [
+          "rave flyer"
+        ]
+      },
+      {
+        "name": "vtype pool",
+        "kind": "group",
+        "group_id": "66774125@N00",
+        "topic": "vintage typography",
+        "room": "drawings",
+        "tags": [
+          "typography",
+          "vintage"
+        ],
+        "sorts": [
+          "date-posted-desc",
+          "date-posted-asc",
+          "interestingness-desc",
+          "interestingness-asc",
+          "date-taken-desc",
+          "date-taken-asc",
+          "relevance"
+        ]
+      },
+      {
+        "name": "bigcreaturemedia gallery",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/bigcreaturemedia/galleries/72157725004901139/",
+        "topic": "gallery",
+        "room": "drawings",
+        "tags": []
+      },
+      {
+        "name": "97947597 album",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/97947597@N00/albums/72157677124822928/",
+        "topic": "gallery",
+        "room": "drawings",
+        "tags": []
+      },
+      {
+        "name": "sancochopuntocom album",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/sancochopuntocom/albums/72157617779320149/",
+        "topic": "gallery",
+        "room": "drawings",
+        "tags": []
+      },
+      {
+        "name": "kikalee gallery",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/kikalee/galleries/72157721114402618/",
+        "topic": "gallery",
+        "room": "drawings",
+        "tags": []
+      },
+      {
+        "name": "80magazine album",
+        "kind": "album",
+        "url": "https://www.flickr.com/photos/80magazine/albums/72157622145586581/",
+        "topic": "gallery",
+        "room": "drawings",
+        "tags": []
+      }
+    ]
   }
 }
